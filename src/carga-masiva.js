@@ -9,6 +9,7 @@ const processQueueBtn = document.getElementById('process-queue-btn');
 const clearQueueBtn = document.getElementById('clear-queue-btn');
 const linkPublicoInput = document.getElementById('link-publico');
 const copiarLinkBtn = document.getElementById('copiar-link-btn');
+const openLinkBtn = document.getElementById('open-link-btn');
 const qrCanvas = document.getElementById('qr-canvas');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -63,6 +64,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             const originalText = copiarLinkBtn.innerHTML;
             copiarLinkBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
             setTimeout(() => { copiarLinkBtn.innerHTML = originalText; }, 2000);
+        });
+    }
+
+    if (openLinkBtn) {
+        openLinkBtn.addEventListener('click', () => {
+            const link = linkPublicoInput.value;
+            if (link) {
+                window.open(link, '_blank');
+            }
         });
     }
 });

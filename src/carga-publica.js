@@ -87,15 +87,12 @@ cvForm.addEventListener('submit', async (e) => {
 
 async function guardarCVEnBaseDeTalentos(nombreArchivo, base64, textoCV, iaData) {
     const nuevoCandidato = {
-      aviso_id: null,
       nombre_archivo: nombreArchivo,
       base64: base64,
       texto_cv: textoCV,
       nombre_candidato: iaData.nombreCompleto,
       email: iaData.email,
-      telefono: iaData.telefono,
-      resumen: 'Datos de contacto extraídos de la carga pública.', // Resumen genérico
-      calificacion: null, // Sin calificación para carga pública
+      telefono: iaData.telefono
     };
 
     const { error } = await supabase.from('candidatos').insert(nuevoCandidato);
