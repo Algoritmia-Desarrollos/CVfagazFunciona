@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalles del Aviso</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="lista-avisos.html" class="nav-logo">Fagaz CV</a>
+      <ul class="nav-menu">
+        <li class="nav-link"><a href="lista-avisos.html" class="active">Mis Búsquedas</a></li>
+        <li class="nav-link"><a href="base-talentos.html">Base de datos</a></li>
+        <li class="nav-link"><a href="carga-masiva.html">Carga Masiva</a></li>
+      </ul>
+      <button class="nav-toggle"><i class="fa-solid fa-bars"></i></button>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <div class="details-container">
+      <div class="dashboard-header">
+        <h1 id="aviso-titulo" class="view-mode-item">Cargando detalles...</h1>
+        <input type="text" id="edit-titulo" class="form-control edit-mode-item hidden" style="font-size: 1.875rem; font-weight: bold;">
+        <div class="actions-group">
+          <button id="cancel-edit-btn" class="btn btn-secondary edit-mode-item hidden">Cancelar</button>
+          <button id="save-edit-btn" class="btn btn-primary edit-mode-item hidden">Guardar Cambios</button>
+          <button id="edit-aviso-btn" class="btn btn-primary view-mode-item"><i class="fa-solid fa-pencil"></i> Editar Aviso</button>
+          <a href="lista-avisos.html" class="btn btn-secondary view-mode-item">
+            <i class="fa-solid fa-arrow-left"></i>
+            Volver
+          </a>
+        </div>
+      </div>
+
+      <div class="details-grid">
+        <div class="details-main">
+          <div class="panel-container">
+            <div class="details-section">
+              <h3>Descripción del Puesto</h3>
+              <p id="aviso-descripcion" class="view-mode-item">Cargando...</p>
+              <textarea id="edit-descripcion" class="form-control edit-mode-item hidden" rows="5"></textarea>
+            </div>
+            <div class="details-section">
+              <h3>Condiciones Necesarias (Excluyentes)</h3>
+              <ul id="necesarias-list" class="lista-condiciones view-mode-item"></ul>
+              <div class="edit-mode-item hidden">
+                <div class="condition-input-group">
+                  <input type="text" id="edit-necesaria-input" placeholder="Añadir condición...">
+                  <button type="button" class="add-btn" id="add-necesaria-btn">+</button>
+                </div>
+                <div id="edit-necesarias-list" class="conditions-list"></div>
+              </div>
+            </div>
+            <div class="details-section">
+              <h3>Condiciones Deseables (Suman Puntos)</h3>
+              <ul id="deseables-list" class="lista-condiciones view-mode-item"></ul>
+              <div class="edit-mode-item hidden">
+                <div class="condition-input-group">
+                  <input type="text" id="edit-deseable-input" placeholder="Añadir condición...">
+                  <button type="button" class="add-btn" id="add-deseable-btn">+</button>
+                </div>
+                <div id="edit-deseables-list" class="conditions-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel-container">
+            <h3>Analizar Candidatos de otras fuentes</h3>
+            
+            <div class="form-row" style="align-items: flex-end; margin-bottom: 1rem; border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); background-color: var(--bg-light);">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="aviso-selector"><strong>Opción 1:</strong> Cargar desde otra búsqueda</label>
+                <select id="aviso-selector"></select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <button id="load-from-aviso-btn" class="btn btn-secondary">
+                  <i class="fa-solid fa-download"></i>
+                  Cargar Candidatos
+                </button>
+              </div>
+            </div>
+
+            <div class="form-row" style="align-items: flex-end; margin-top: 1.5rem; border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); background-color: var(--bg-light);">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="folder-selector"><strong>Opción 2:</strong> Cargar desde una carpeta de tu Base de Datos</label>
+                <select id="folder-selector">
+                  <option value="" disabled selected>Selecciona una carpeta...</option>
+                  </select>
+              </div>
+            </div>
+            
+            <div id="talent-pool-container" class="hidden" style="margin-top: 1.5rem;">
+              <div id="matching-status" class="processing-status" style="margin-bottom: 1rem;"></div>
+              <div class="talent-pool-controls">
+                <input type="checkbox" id="select-all-checkbox">
+                <label for="select-all-checkbox">Seleccionar/Deseleccionar Todos</label>
+              </div>
+              <ul id="talent-pool-list" class="talent-pool-list"></ul>
+              <div class="form-actions">
+                <button id="match-btn" class="btn btn-primary" disabled>
+                  <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                  Enviar Candidatos para Análisis
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="details-sidebar">
+          <div class="panel-container share-section">
+            <h3>Link para Postulantes</h3>
+            <p class="text-light">Comparte este link para que los candidatos puedan postularse.</p>
+            <div class="qr-code">
+              <canvas id="qr-canvas"></canvas>
+            </div>
+            <div class="link-group">
+              <input type="text" id="link-postulante" readonly>
+              <button id="copiar-link-btn" class="btn btn-secondary" title="Copiar link">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+            <a id="abrir-link-btn" href="#" target="_blank" class="btn btn-primary" style="width: 100%; margin-top: 0.75rem;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              Abrir Link
+            </a>
+          </div>
+          <div class="panel-container">
+            <h3>Información General</h3>
+            <p><strong>ID de Evaluación:</strong> <span id="aviso-id"></span></p>
+            <p><strong>Máx. CVs:</strong> <span id="aviso-max-cv"></span></p>
+            <p><strong>Válido hasta:</strong> <span id="aviso-valido-hasta"></span></p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script>
+    document.querySelector('.nav-toggle').addEventListener('click', () => {
+      document.querySelector('.nav-menu').classList.toggle('active');
+    });
+  </script>
+  <script type="module" src="src/detalles-aviso.js"></script>
+</body>
+</html>
