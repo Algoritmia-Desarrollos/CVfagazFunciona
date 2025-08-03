@@ -1,9 +1,7 @@
-// Se importa el cliente de Supabase.
 import { supabase } from './supabaseClient.js';
 import { showSpinner, hideSpinner } from './utils.js';
 
-
-// --- SELECTORES Y CONSTANTES GLOBALES ---
+// --- SELECTORES ---
 const resumenesList = document.getElementById('resumenes-list');
 const modalContainer = document.getElementById('modal-container');
 const modalTitle = document.getElementById('modal-title');
@@ -15,10 +13,8 @@ const filtroContainer = document.getElementById('filtro-container');
 const filtroNombre = document.getElementById('filtro-nombre');
 const modalSaveNotesBtn = document.getElementById('modal-save-notes');
 const modalCancelBtn = document.getElementById('modal-cancel');
-// ✨ NUEVOS SELECTORES PARA CARGA DIRECTA ✨
 const uploadCvBtn = document.getElementById('upload-cv-btn');
 const fileInputResumenes = document.getElementById('file-input-resumenes');
-
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 let archivosCache = [];
@@ -49,10 +45,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function cargarYProcesarCandidatos(avisoId) {
     processingStatus.classList.remove('hidden');
     
-    const candidatos = await getCandidatosByAvisoId(avisoId);
-    archivosCache = candidatos;
+    const evaluaciones = await getCandidatosByAvisoId(avisoId);
+    archivosCache = evaluaciones;
 
-    if (candidatos.length === 0) {
+    if (evaluaciones.length === 0) {
         processingStatus.textContent = "Aún no hay candidatos para esta búsqueda.";
         resumenesList.innerHTML = `<tr><td colspan="6" style="text-align: center;">Nadie se ha postulado todavía.</td></tr>`;
     } else {
@@ -61,50 +57,48 @@ async function cargarYProcesarCandidatos(avisoId) {
     
     filtroContainer.classList.remove('hidden');
 
-    const nuevosCandidatos = candidatos.filter(cv => cv.calificacion === null || cv.calificacion === -1);
+    const nuevasEvaluaciones = evaluaciones.filter(ev => ev.calificacion === null || ev.calificacion === -1);
     
-    if (nuevosCandidatos.length > 0) {
-        processingStatus.textContent = `Analizando ${nuevosCandidatos.length} nuevos CVs...`;
+    if (nuevasEvaluaciones.length > 0) {
+        processingStatus.textContent = `Analizando ${nuevasEvaluaciones.length} nuevos CVs...`;
         
-        for (const [index, cv] of nuevosCandidatos.entries()) {
-            processingStatus.textContent = `Procesando ${index + 1} de ${nuevosCandidatos.length}... (${cv.nombre_archivo})`;
+        for (const [index, evaluacion] of nuevasEvaluaciones.entries()) {
+            processingStatus.textContent = `Procesando ${index + 1} de ${nuevasEvaluaciones.length}... (${evaluacion.nombre_archivo})`;
             
-            if (cv.calificacion === -1) {
-                cv.calificacion = null;
-                actualizarFilaEnVista(cv.id);
+            if (evaluacion.calificacion === -1) {
+                evaluacion.calificacion = null;
+                actualizarFilaEnVista(evaluacion.id);
             }
 
             try {
-                const textoCV = cv.texto_cv || await extraerTextoDePDF(cv.base64);
-                
-                if (!textoCV || textoCV.trim().length < 50) {
-                    throw new Error("El PDF parece estar vacío o no se pudo leer el contenido.");
-                }
+                const textoCV = evaluacion.texto_cv || await extraerTextoDePDF(evaluacion.base64);
+                if (!textoCV || textoCV.trim().length < 50) throw new Error("PDF vacío o ilegible.");
 
                 const iaData = await calificarCVConIA(textoCV, avisoActivo);
                 
-                const datosActualizados = {
+                await supabase.from('candidatos').update({
                     texto_cv: textoCV,
                     nombre_candidato: iaData.nombreCompleto,
                     email: iaData.email,
-                    telefono: iaData.telefono,
+                    telefono: iaData.telefono
+                }).eq('id', evaluacion.id);
+
+                await supabase.from('evaluaciones').update({
                     calificacion: iaData.calificacion,
                     resumen: iaData.justificacion
-                };
-                
-                await actualizarCandidatoEnDB(cv.id, datosActualizados);
-                Object.assign(cv, datosActualizados);
+                }).eq('id', evaluacion.evaluacion_id);
+
+                Object.assign(evaluacion, iaData);
                 
             } catch (error) {
-                console.error(`Falló el procesamiento para el CV ${cv.id}:`, error);
-                const datosError = {
+                console.error(`Falló el procesamiento para el CV ${evaluacion.id}:`, error);
+                await supabase.from('evaluaciones').update({
                     calificacion: -1,
                     resumen: `Error de análisis: ${error.message}`
-                };
-                await actualizarCandidatoEnDB(cv.id, datosError);
-                Object.assign(cv, datosError);
+                }).eq('id', evaluacion.evaluacion_id);
+                evaluacion.calificacion = -1;
             }
-            actualizarFilaEnVista(cv.id);
+            actualizarFilaEnVista(evaluacion.id);
         }
         processingStatus.textContent = "Análisis completado.";
     } else {
@@ -112,9 +106,7 @@ async function cargarYProcesarCandidatos(avisoId) {
     }
 }
 
-// =================================================================================
-// ✨ LÓGICA AÑADIDA PARA CARGA DIRECTA DE CVs ✨
-// =================================================================================
+// LÓGICA PARA CARGA DIRECTA DE CVs
 if (uploadCvBtn) {
     uploadCvBtn.addEventListener('click', () => {
         fileInputResumenes.click();
@@ -127,37 +119,41 @@ if (fileInputResumenes) {
         if (!files.length || !avisoActivo) return;
 
         uploadCvBtn.disabled = true;
-        
-        processingStatus.textContent = `Agregando ${files.length} nuevo(s) CV(s) a la lista de análisis...`;
+        processingStatus.textContent = `Agregando ${files.length} nuevo(s) CV(s)...`;
         
         for (const file of files) {
             try {
                 const base64 = await fileToBase64(file);
-                const nuevoCandidato = {
-                    aviso_id: avisoActivo.id,
-                    nombre_archivo: file.name,
-                    base64: base64,
-                    calificacion: null
-                };
                 
-                const { data, error } = await supabase.from('candidatos').insert(nuevoCandidato).select().single();
-                if (error) throw error;
+                const { data: candidato, error: candidatoError } = await supabase
+                    .from('candidatos')
+                    .insert({ nombre_archivo: file.name, base64: base64 })
+                    .select().single();
+
+                if (candidatoError) throw candidatoError;
+
+                const { error: evaluacionError } = await supabase
+                    .from('evaluaciones')
+                    .insert({ candidato_id: candidato.id, aviso_id: avisoActivo.id });
                 
-                archivosCache.unshift(data);
-                actualizarVistaCandidatos();
+                if (evaluacionError) {
+                    await supabase.from('candidatos').delete().eq('id', candidato.id);
+                    throw evaluacionError;
+                }
 
             } catch (error) {
                 console.error(`Error al subir el archivo ${file.name}:`, error);
-                alert(`No se pudo subir el archivo: ${file.name}`);
+                alert(`No se pudo subir el archivo: ${file.name}. Detalles: ${error.message}`);
             }
         }
-
-        await cargarYProcesarCandidatos(avisoActivo.id);
+        
+        await cargarYProcesarCandidatos(avisoActivo.id); 
         uploadCvBtn.disabled = false;
         fileInputResumenes.value = '';
     });
 }
 
+// --- FUNCIONES AUXILIARES Y DE RENDERIZADO ---
 
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -168,8 +164,6 @@ function fileToBase64(file) {
     });
 }
 
-
-// --- FUNCIONES DE BASE DE DATOS (SUPABASE) ---
 async function getAvisoById(id) {
     const { data, error } = await supabase.from('avisos').select('*').eq('id', id).single();
     if (error) throw error;
@@ -177,122 +171,58 @@ async function getAvisoById(id) {
 }
 
 async function getCandidatosByAvisoId(avisoId) {
-    const { data, error } = await supabase.from('candidatos').select('*').eq('aviso_id', avisoId).order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-}
+    const { data, error } = await supabase
+        .from('evaluaciones')
+        .select(`
+            id, calificacion, resumen, notas,
+            candidatos (id, nombre_candidato, email, telefono, nombre_archivo, base64, texto_cv)
+        `)
+        .eq('aviso_id', avisoId);
 
-async function actualizarCandidatoEnDB(candidatoId, datos) {
-    const { error } = await supabase.from('candidatos').update(datos).eq('id', candidatoId);
     if (error) throw error;
+
+    return data.map(evaluacion => ({
+        ...evaluacion.candidatos,
+        evaluacion_id: evaluacion.id,
+        calificacion: evaluacion.calificacion,
+        resumen: evaluacion.resumen,
+        notas: evaluacion.notas
+    }));
 }
 
 async function extraerTextoDePDF(base64) {
     const pdf = await pdfjsLib.getDocument(base64).promise;
+    let textoFinal = '';
     try {
-        let textoNativo = '';
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            textoNativo += textContent.items.map(item => item.str).join(' ');
+            textoFinal += textContent.items.map(item => item.str).join(' ');
         }
-        textoNativo = textoNativo.trim().replace(/\x00/g, '');
-        if (textoNativo.length > 100) return textoNativo;
-    } catch (error) {
-        console.warn("Fallo en extracción nativa, intentando OCR.", error);
-    }
+        if (textoFinal.trim().length > 100) return textoFinal.trim().replace(/\x00/g, '');
+    } catch (e) { console.warn("Extracción nativa fallida, intentando OCR", e); }
+    
     console.log("Recurriendo a OCR...");
-    try {
-        let textoOCR = '';
-        const canvas = document.createElement('canvas');
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 2.0 }); 
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            const result = await Tesseract.recognize(canvas, 'spa');
-            textoOCR += `\n--- Página ${i} ---\n${result.data.text}`;
-        }
-        return textoOCR.replace(/\x00/g, '');
-    } catch (error) {
-        throw new Error("No se pudo leer el contenido del PDF.");
+    textoFinal = '';
+    const canvas = document.createElement('canvas');
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        const result = await Tesseract.recognize(canvas, 'spa');
+        textoFinal += result.data.text;
     }
+    return textoFinal.replace(/\x00/g, '');
 }
 
 async function calificarCVConIA(textoCV, aviso) {
     const textoCVOptimizado = textoCV.substring(0, 12000);
-    const contextoAviso = `
-- **Puesto:** ${aviso.titulo}
-- **Descripción:** ${aviso.descripcion}
-- **Condiciones Necesarias (Excluyentes):** ${aviso.condiciones_necesarias.join(', ') || 'No especificadas'}
-- **Condiciones Deseables (Suman Puntos):** ${aviso.condiciones_deseables.join(', ') || 'No especificadas'}
-`;
-    const prompt = `
-Actúa como un Headhunter y Especialista Senior en Reclutamiento y Selección para una consultora de alto nivel. Tu criterio es agudo, realista y orientado a resultados. Tu misión es realizar un análisis exhaustivo y profesional de un CV en relación con una búsqueda laboral específica, culminando en una calificación precisa y una justificación detallada.
+    const contextoAviso = `Puesto: ${aviso.titulo}, Descripción: ${aviso.descripcion}, Condiciones Necesarias: ${aviso.condiciones_necesarias.join(', ')}, Condiciones Deseables: ${aviso.condiciones_deseables.join(', ')}`;
+    const prompt = `Analiza el CV en el contexto de la búsqueda: "${contextoAviso}". Extrae nombreCompleto, email, telefono. Califica de 1 a 100. Justifica en un párrafo. Devuelve JSON con claves: nombreCompleto, email, telefono, calificacion, justificacion. CV: """${textoCVOptimizado}"""`;
 
-**Contexto de la Búsqueda (Job Description):**
-${contextoAviso}
-
-**Texto del CV a Analizar:**
-"""${textoCVOptimizado}"""
-
----
-
-**METODOLOGÍA DE EVALUACIÓN ESTRUCTURADA (SEGUIR ESTRICTAMENTE CADA PASO):**
-
-**PASO 1: Extracción de Datos Fundamentales.**
-Primero, identifica y extrae los siguientes datos clave del candidato. Si un dato no está presente, usa \`null\`.
-- **nombreCompleto:** Busca el nombre más prominente, usualmente al principio del documento. Ignora "Curriculum Vitae", "CV", "Nombre:", etc. Intenta capturar nombre y al menos un apellido.
-- **email:** Busca patrones claros de email con "@". Extrae solo la dirección. Si hay varios, elige el más profesional.
-- **telefono:** Reconoce múltiples formatos (con/sin prefijos +, guiones, espacios). Prioriza números móviles si hay varios.
-
-**PASO 2: Análisis de Relevancia y Coincidencia Directa (Filtro Crítico).**
-Este es el paso más importante. Antes de cualquier otra cosa, determina el grado de "match" directo entre el CV y el aviso.
-
-**Coincidencia de Puesto (ALTA PRIORIDAD):** ¿Ha ocupado el candidato un puesto con un título idéntico o muy similar al del aviso? ¿Las funciones que describe en esa experiencia coinciden con la descripción del aviso? Una coincidencia fuerte aquí es el indicador más positivo y debe ser el factor principal de la calificación.
-
-**Análisis de Condiciones Necesarias (Excluyentes):** Verifica metódica y literalmente cada una de las condiciones.
-
-Si el candidato NO CUMPLE ni siquiera una de estas condiciones, la calificación NO PUEDE superar los 40 puntos, sin importar qué otros méritos tenga. Este es un filtro no negociable.
-
-Si cumple todas, tiene una base sólida para una buena calificación.
-
-**Análisis de Condiciones Deseables (Suman Puntos):** Revisa cuántas de estas condiciones cumple. Cada coincidencia no solo suma puntos, sino que refuerza la idoneidad del candidato.
-
-**PASO 3: Análisis Cualitativo del Perfil (Peso Secundario).**
-Una vez establecido el "match" técnico, evalúa la calidad del candidato.
-
-**Progresión y Estabilidad:** ¿Muestra un crecimiento lógico en sus roles? ¿Su estabilidad laboral es coherente con el sector o presenta cambios demasiado frecuentes que puedan ser una señal de alerta?
-
-**Logros Cuantificables:** ¿El candidato demuestra su impacto con datos y métricas (ej: "reduje costos en un 10%") o solo lista tareas? Los logros concretos son mucho más valiosos.
-
-**Habilidades y Tecnologías Adicionales:** ¿Menciona herramientas, software o habilidades que, aunque no se pidieron, son claramente relevantes y valiosas para el puesto?
-
-**PASO 4: Sistema de Calificación Numérica (1-100).**
-Sintetiza tu análisis en un número, basándote en la siguiente escala de criterio:
-
-**1-40 (Descartado):** No cumple con una o más Condiciones Necesarias. O el perfil es de un campo completamente diferente.
-
-**41-65 (Bajo Potencial):** Cumple las condiciones necesarias "por los pelos", pero no tiene experiencia directa en el rol y carece de la mayoría de las deseables.
-
-**66-85 (Sólido / Recomendado):** Cumple TODAS las condiciones necesarias y varias de las deseables. Su experiencia laboral es muy similar o directamente transferible al puesto del aviso. Este es el rango para un buen candidato que encaja bien.
-
-**86-100 (Excepcional / Prioritario):** Cumple TODO lo necesario y la mayoría de lo deseable. Crucialmente, ya ha trabajado en un puesto idéntico o casi idéntico al del aviso, demostrando éxito y logros en él. Es un candidato ideal.
-
-**PASO 5: Elaboración de la Justificación Profesional.**
-Redacta un párrafo único y conciso que resuma tu dictamen. Estructúralo así:
-
-**Veredicto Inicial:** Comienza con una afirmación clara sobre el nivel de "match" (Ej: "El candidato presenta un match directo y fuerte con la búsqueda..." o "El perfil no cumple con los requisitos excluyentes clave...").
-
-**Argumento Central:** Justifica el veredicto mencionando explícitamente qué condiciones necesarias y deseables cumple o no. Destaca si tiene experiencia previa en el mismo rol.
-
-**Conclusión y Recomendación:** Cierra con una síntesis que conecte el análisis con la nota y una recomendación clara (Ej: "...lo que resulta en una calificación de 88/100. Se recomienda una entrevista inmediata." o "...resultando en una calificación de 35/100 por no cumplir con el requisito de experiencia mínima. Se recomienda descartar.").
-
-**Formato de Salida (JSON estricto):**
-Devuelve un objeto JSON con 5 claves: "nombreCompleto", "email", "telefono", "calificacion" (número entero) y "justificacion" (el string de texto).
-`;
     const { data, error } = await supabase.functions.invoke('openai', { body: { query: prompt } });
     if (error) throw new Error("No se pudo conectar con la IA.");
     try {
@@ -302,25 +232,21 @@ Devuelve un objeto JSON con 5 claves: "nombreCompleto", "email", "telefono", "ca
             email: content.email || 'No especificado',
             telefono: content.telefono || 'No especificado',
             calificacion: content.calificacion === undefined ? 0 : content.calificacion,
-            justificacion: content.justificacion || "La IA no pudo generar una justificación."
+            justificacion: content.justificacion || "Sin justificación."
         };
     } catch (e) {
-        throw new Error("La IA devolvió una respuesta con un formato inesperado.");
+        throw new Error("La IA devolvió una respuesta inesperada.");
     }
 }
 
 function actualizarVistaCandidatos() {
     const filtro = filtroNombre.value.toLowerCase();
-    const candidatosFiltrados = archivosCache.filter(cv => {
-        const nombreCandidato = (cv.nombre_candidato || '').toLowerCase();
-        const nombreArchivo = (cv.nombre_archivo || '').toLowerCase();
-        return nombreCandidato.includes(filtro) || nombreArchivo.includes(filtro);
-    });
-    candidatosFiltrados.sort((a, b) => {
-        const scoreA = (typeof a.calificacion === 'number' ? a.calificacion : -1);
-        const scoreB = (typeof b.calificacion === 'number' ? b.calificacion : -1);
-        return scoreB - scoreA;
-    });
+    const candidatosFiltrados = archivosCache.filter(cv => 
+        (cv.nombre_candidato || '').toLowerCase().includes(filtro) || 
+        (cv.nombre_archivo || '').toLowerCase().includes(filtro)
+    );
+    candidatosFiltrados.sort((a, b) => (b.calificacion || -1) - (a.calificacion || -1));
+    
     resumenesList.innerHTML = '';
     if (candidatosFiltrados.length === 0) {
         resumenesList.innerHTML = '<tr><td colspan="6" style="text-align: center;">No se encontraron candidatos.</td></tr>';
@@ -331,16 +257,12 @@ function actualizarVistaCandidatos() {
 
 function actualizarFilaEnVista(cvId) {
     const cv = archivosCache.find(c => c.id === cvId);
-    if (cv) {
-        renderizarFila(cv, false);
-    }
+    if (cv) renderizarFila(cv, false);
 }
 
 function renderizarFila(cv, esNueva) {
-    let calificacionMostrada;
-    if (cv.calificacion === null) {
-        calificacionMostrada = '<em>Analizando...</em>';
-    } else if (cv.calificacion === -1) {
+    let calificacionMostrada = '<em>Analizando...</em>';
+    if (cv.calificacion === -1) {
         calificacionMostrada = `<strong style="color: var(--danger-color);">Error</strong>`;
     } else if (typeof cv.calificacion === 'number') {
         calificacionMostrada = `<strong>${cv.calificacion} / 100</strong>`;
@@ -366,33 +288,31 @@ function renderizarFila(cv, esNueva) {
         resumenesList.appendChild(newRow);
     } else {
         const existingRow = resumenesList.querySelector(`tr[data-id='${cv.id}']`);
-        if (existingRow) {
-            existingRow.innerHTML = rowHTML;
-        }
+        if (existingRow) existingRow.innerHTML = rowHTML;
     }
 }
+
 filtroNombre.addEventListener('input', actualizarVistaCandidatos);
 
 resumenesList.addEventListener('click', (e) => {
     const button = e.target.closest('.btn');
     if (!button) return;
     const row = e.target.closest('tr');
-    if (!row) return;
     const cvId = parseInt(row.dataset.id, 10);
-    const action = button.dataset.action;
     const cv = archivosCache.find(c => c.id === cvId);
     if (!cv) return;
-    switch (action) {
+    
+    switch (button.dataset.action) {
         case 'ver-resumen': abrirModalResumen(cv); break;
         case 'ver-contacto': abrirModalContacto(cv); break;
         case 'ver-notas': abrirModalNotas(cv); break;
     }
 });
 
+// --- LÓGICA DE MODALES ---
 function abrirModalResumen(cv) {
     modalTitle.textContent = `Análisis de ${cv.nombre_candidato || 'Candidato'}`;
-    let bodyContent = `<h4>Calificación: ${typeof cv.calificacion === 'number' ? cv.calificacion + '/100' : cv.calificacion}</h4><p>${cv.resumen ? cv.resumen.replace(/\n/g, '<br>') : 'No hay análisis disponible.'}</p>`;
-    modalBody.innerHTML = bodyContent;
+    modalBody.innerHTML = `<h4>Calificación: ${cv.calificacion}/100</h4><p>${cv.resumen || 'No hay análisis.'}</p>`;
     modalSaveNotesBtn.classList.add('hidden');
     abrirModal();
 }
@@ -406,14 +326,13 @@ function abrirModalContacto(cv) {
 
 async function abrirModalNotas(cv) {
     modalTitle.textContent = `Notas sobre ${cv.nombre_candidato || 'Candidato'}`;
-    modalBody.innerHTML = `<textarea id="notas-textarea" placeholder="Escribe tus notas aquí...">${cv.notas || ''}</textarea>`;
+    modalBody.innerHTML = `<textarea id="notas-textarea" placeholder="Escribe tus notas...">${cv.notas || ''}</textarea>`;
     modalSaveNotesBtn.classList.remove('hidden');
     modalSaveNotesBtn.onclick = async () => {
         const nuevasNotas = document.getElementById('notas-textarea').value;
         try {
-            await actualizarCandidatoEnDB(cv.id, { notas: nuevasNotas });
-            const candidatoCache = archivosCache.find(c => c.id === cv.id);
-            candidatoCache.notas = nuevasNotas;
+            await supabase.from('evaluaciones').update({ notas: nuevasNotas }).eq('id', cv.evaluacion_id);
+            cv.notas = nuevasNotas;
             cerrarModal();
             actualizarFilaEnVista(cv.id);
         } catch (error) {
@@ -426,9 +345,7 @@ async function abrirModalNotas(cv) {
 modalCloseBtn.addEventListener('click', cerrarModal);
 modalCancelBtn.addEventListener('click', cerrarModal);
 modalContainer.addEventListener('click', (e) => {
-    if (e.target === modalContainer) {
-        cerrarModal();
-    }
+    if (e.target === modalContainer) cerrarModal();
 });
 
 function abrirModal() {
@@ -438,8 +355,5 @@ function abrirModal() {
 
 function cerrarModal() {
     modalContainer.classList.remove('visible');
-    setTimeout(() => {
-        modalContainer.classList.add('hidden');
-        modalBody.innerHTML = '';
-    }, 300);
+    setTimeout(() => modalContainer.classList.add('hidden'), 300);
 }

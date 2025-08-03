@@ -182,7 +182,7 @@ async function processQueue() {
     renderQueue();
 
     const CONCURRENT_LIMIT = 3;
-    const selectedFolderId = folderSelect.value === "none" ? null : (folderSelect.value || null);
+    const selectedFolderId = folderSelect.value === "" ? null : folderSelect.value;
 
     while (true) {
         let queue = getQueue();
@@ -191,21 +191,22 @@ async function processQueue() {
         if (itemsToProcess.length === 0) break;
 
         const promises = itemsToProcess.map(async (item) => {
-            // Marcar como 'processing'
             item.status = 'processing';
-            item.error = null;
             saveQueue(getQueue().map(q => q.id === item.id ? item : q));
             updateQueueItemUI(item.id, 'processing');
             
             try {
                 const file = tempFileStore[item.id];
-                if (!file) throw new Error("Archivo no encontrado en memoria. Por favor, recargue y seleccione de nuevo.");
+                if (!file) throw new Error("Archivo no encontrado. Recarga la página y añádelo de nuevo.");
 
                 const base64 = await fileToBase64(file);
                 const textoCV = await extraerTextoDePDF(base64);
                 if (!textoCV || textoCV.trim().length < 50) throw new Error("PDF vacío o ilegible.");
                 
                 const iaData = await extraerDatosConIA(textoCV);
+
+                // ✨ OBJETO `nuevoCandidato` CORREGIDO ✨
+                // Se eliminaron las columnas que ya no existen en la tabla `candidatos`.
                 const nuevoCandidato = {
                     nombre_archivo: item.fileName,
                     base64: base64,
@@ -213,23 +214,19 @@ async function processQueue() {
                     nombre_candidato: iaData.nombreCompleto,
                     email: iaData.email,
                     telefono: iaData.telefono,
-                    carpeta_id: selectedFolderId,
-                    resumen: null,
-                    calificacion: null,
-                    aviso_id: null
+                    carpeta_id: selectedFolderId
                 };
 
                 const { error } = await supabase.from('candidatos').insert(nuevoCandidato);
                 if (error) throw new Error(error.message);
                 
                 item.status = 'success';
-                delete tempFileStore[item.id]; // Limpiar de la memoria
+                delete tempFileStore[item.id];
             } catch (error) {
                 item.status = 'error';
                 item.error = error.message;
             }
             
-            // Actualizar el item final en la cola de localStorage
             let finalQueue = getQueue();
             const finalItem = finalQueue.find(q => q.id === item.id);
             if (finalItem) {
@@ -244,7 +241,6 @@ async function processQueue() {
     }
 
     isProcessing = false;
-    localStorage.removeItem('talentPoolCache');
     renderQueue();
 }
 

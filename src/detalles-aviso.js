@@ -13,19 +13,13 @@ const linkPostulanteInput = document.getElementById('link-postulante');
 const copiarLinkBtn = document.getElementById('copiar-link-btn');
 const abrirLinkBtn = document.getElementById('abrir-link-btn');
 const qrCanvas = document.getElementById('qr-canvas');
-
-// --- SELECTORES PARA CARGA DE CANDIDATOS ---
 const avisoSelector = document.getElementById('aviso-selector');
-const loadFromAvisoBtn = document.getElementById('load-from-aviso-btn');
 const folderSelector = document.getElementById('folder-selector');
 const talentPoolContainer = document.getElementById('talent-pool-container');
 const talentPoolList = document.getElementById('talent-pool-list');
 const selectAllCheckbox = document.getElementById('select-all-checkbox');
 const matchBtn = document.getElementById('match-btn');
 const matchingStatus = document.getElementById('matching-status');
-
-
-// --- ✨ NUEVOS SELECTORES PARA EL MODO EDICIÓN ✨ ---
 const editAvisoBtn = document.getElementById('edit-aviso-btn');
 const saveEditBtn = document.getElementById('save-edit-btn');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
@@ -37,13 +31,14 @@ const addNecesariaBtn = document.getElementById('add-necesaria-btn');
 const addDeseableBtn = document.getElementById('add-deseable-btn');
 const editNecesariasList = document.getElementById('edit-necesarias-list');
 const editDeseablesList = document.getElementById('edit-deseables-list');
+const loadFromAvisoBtn = document.getElementById('load-from-aviso-btn');
 
 let avisoActivo = null;
 let condicionesNecesariasEdit = [];
 let condicionesDeseablesEdit = [];
 let currentTalentPool = [];
 
-// --- LÓGICA PRINCIPAL ---
+// --- LÓGICA PRINCIPAL (Listeners) ---
 window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const avisoId = params.get('id');
@@ -57,23 +52,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadOtherAvisos(avisoId);
     await loadFolders();
 
-    // --- Listeners para Carga de Candidatos ---
-    folderSelector.addEventListener('change', () => loadTalentPool(folderSelector.value));
-    matchBtn.addEventListener('click', () => processSelectedCandidates(avisoId));
+    // Listeners para Talent Pool
+    folderSelector.addEventListener('change', () => loadTalentPool({ folderId: folderSelector.value }));
+    loadFromAvisoBtn.addEventListener('click', () => loadTalentPool({ avisoId: avisoSelector.value }));
+    matchBtn.addEventListener('click', processSelectedCandidates);
     selectAllCheckbox.addEventListener('change', () => {
         const checkboxes = talentPoolList.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = selectAllCheckbox.checked);
-        matchBtn.disabled = !selectAllCheckbox.checked;
+        updateMatchButtonState();
     });
-    talentPoolList.addEventListener('change', (e) => {
-        if (e.target.matches('input[type="checkbox"]')) {
-            const checkedCheckboxes = talentPoolList.querySelectorAll('input[type="checkbox"]:checked');
-            matchBtn.disabled = checkedCheckboxes.length === 0;
-        }
-    });
+    talentPoolList.addEventListener('change', () => updateMatchButtonState());
 
-
-    // ✨ Listeners para los nuevos botones ✨
+    // Listeners para Modo Edición
     editAvisoBtn.addEventListener('click', () => toggleEditMode(true));
     cancelEditBtn.addEventListener('click', () => toggleEditMode(false));
     saveEditBtn.addEventListener('click', guardarCambiosAviso);
@@ -85,6 +75,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             renderizarCondicionesParaEdicion(editNecesariasList, condicionesNecesariasEdit, 'necesaria');
         }
     });
+
     addDeseableBtn.addEventListener('click', () => {
         if (editDeseableInput.value.trim()) {
             condicionesDeseablesEdit.push(editDeseableInput.value.trim());
@@ -93,42 +84,33 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    document.body.addEventListener('click', (e) => {
+    editNecesariasList.addEventListener('click', (e) => {
         if (e.target.classList.contains('remove-btn')) {
-            const index = parseInt(e.target.dataset.index, 10);
-            const tipo = e.target.dataset.tipo;
-            if (tipo === 'necesaria') {
-                condicionesNecesariasEdit.splice(index, 1);
-                renderizarCondicionesParaEdicion(editNecesariasList, condicionesNecesariasEdit, 'necesaria');
-            } else if (tipo === 'deseable') {
-                condicionesDeseablesEdit.splice(index, 1);
-                renderizarCondicionesParaEdicion(editDeseablesList, condicionesDeseablesEdit, 'deseable');
-            }
+            const index = e.target.dataset.index;
+            condicionesNecesariasEdit.splice(index, 1);
+            renderizarCondicionesParaEdicion(editNecesariasList, condicionesNecesariasEdit, 'necesaria');
         }
     });
 
-    copiarLinkBtn.addEventListener('click', () => {
-        linkPostulanteInput.select();
-        document.execCommand('copy');
-        alert('Link copiado al portapapeles');
+    editDeseablesList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-btn')) {
+            const index = e.target.dataset.index;
+            condicionesDeseablesEdit.splice(index, 1);
+            renderizarCondicionesParaEdicion(editDeseablesList, condicionesDeseablesEdit, 'deseable');
+        }
     });
 });
 
+// --- CARGA DE DATOS INICIAL ---
 async function loadAvisoDetails(id) {
     showSpinner();
-    const { data, error } = await supabase
-        .from('avisos')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const { data, error } = await supabase.from('avisos').select('*').eq('id', id).single();
     hideSpinner();
-
     if (error) {
-        console.error('Error fetching aviso:', error);
-        avisoTitulo.textContent = 'Error al cargar el aviso';
+        console.error('Error loading aviso details:', error);
+        document.body.innerHTML = '<p>Error al cargar el aviso. Por favor, vuelve a la <a href="lista-avisos.html">lista de avisos</a>.</p>';
         return;
     }
-
     avisoActivo = data;
     populateUI(avisoActivo);
 }
@@ -141,19 +123,17 @@ function populateUI(aviso) {
     renderCondiciones(deseablesList, aviso.condiciones_deseables);
 
     avisoIdSpan.textContent = aviso.id;
-    avisoMaxCvSpan.textContent = aviso.max_cvs || 'Ilimitados';
+    avisoMaxCvSpan.textContent = aviso.max_cv || 'Ilimitados';
     avisoValidoHastaSpan.textContent = new Date(aviso.valido_hasta).toLocaleDateString();
 
-    const publicLink = `${window.location.origin}/carga-publica.html?id=${aviso.id}`;
+    const publicLink = `${window.location.origin}/index.html?avisoId=${aviso.id}`;
     linkPostulanteInput.value = publicLink;
     abrirLinkBtn.href = publicLink;
 
     new QRious({
         element: qrCanvas,
         value: publicLink,
-        size: 150,
-        background: 'white',
-        foreground: 'black',
+        size: 150
     });
 }
 
@@ -173,32 +153,21 @@ function renderCondiciones(listElement, condiciones) {
     }
 }
 
-// --- LÓGICA PARA CARGAR CANDIDATOS ---
-
 async function loadOtherAvisos(currentAvisoId) {
-    const { data, error } = await supabase.from('avisos').select('id, titulo').neq('id', currentAvisoId);
-    if (error) {
-        console.error('Error loading other avisos:', error);
-        return;
-    }
+    const { data, error } = await supabase.from('avisos').select('id, titulo').not('id', 'eq', currentAvisoId);
+    if (error) return console.error('Error loading other avisos:', error);
+    
     avisoSelector.innerHTML = '<option value="" disabled selected>Selecciona un aviso...</option>';
     data.forEach(aviso => {
-        const option = document.createElement('option');
-        option.value = aviso.id;
-        option.textContent = aviso.titulo;
-        avisoSelector.appendChild(option);
+        avisoSelector.innerHTML += `<option value="${aviso.id}">${aviso.titulo}</option>`;
     });
 }
 
 async function loadFolders() {
-    const { data: folders, error } = await supabase.from('carpetas').select('*').order('created_at');
-    if (error) {
-        console.error("Error cargando carpetas", error);
-        return;
-    }
-    
+    const { data: folders, error } = await supabase.from('carpetas').select('*').order('nombre', { ascending: true });
+    if (error) return console.error('Error loading folders:', error);
+
     folderSelector.innerHTML = '<option value="" disabled selected>Selecciona una carpeta...</option>';
-    // Función recursiva para mostrar la jerarquía de subcarpetas
     function populate(parentId = null, level = 0) {
         const prefix = '\u00A0\u00A0'.repeat(level);
         const children = folders.filter(f => f.parent_id === parentId);
@@ -210,84 +179,106 @@ async function loadFolders() {
     populate();
 }
 
-async function loadTalentPool(folderId) {
-    if (!folderId) {
+// --- LÓGICA DE TALENT POOL ---
+async function loadTalentPool({ folderId, avisoId }) {
+    if (!folderId && !avisoId) {
         talentPoolContainer.classList.add('hidden');
         return;
     }
     showSpinner();
-    const { data, error } = await supabase
-        .from('candidatos')
-        .select('id, nombre_candidato, texto_cv, aviso_id, base64, email')
-        .eq('carpeta_id', folderId);
+    let finalData = [];
+    let error = null;
+
+    if (folderId) {
+        const { data, error: folderError } = await supabase
+            .from('candidatos')
+            .select('id, nombre_candidato, email')
+            .eq('carpeta_id', folderId);
+        finalData = data;
+        error = folderError;
+    } else if (avisoId) {
+        const { data, error: avisoError } = await supabase
+            .from('evaluaciones')
+            .select('candidatos(id, nombre_candidato, email)')
+            .eq('aviso_id', avisoId);
+        
+        if (data) {
+            finalData = data.map(item => item.candidatos).filter(Boolean);
+        }
+        error = avisoError;
+    }
+
     hideSpinner();
 
-    if (error) {
-        console.error('Error loading talent pool:', error);
-        return;
-    }
-    currentTalentPool = data;
-    renderTalentPool(data);
+    if (error) return console.error('Error loading talent pool:', error);
+
+    currentTalentPool = finalData;
+    renderTalentPool(finalData);
     talentPoolContainer.classList.remove('hidden');
 }
 
 function renderTalentPool(candidatos) {
     talentPoolList.innerHTML = '';
-    if (candidatos.length === 0) {
-        talentPoolList.innerHTML = '<li class="empty-list">No hay candidatos en esta carpeta.</li>';
+    if (!candidatos || candidatos.length === 0) {
+        talentPoolList.innerHTML = '<li class="empty-list">No se encontraron candidatos.</li>';
         return;
     }
     candidatos.forEach(candidato => {
         const li = document.createElement('li');
         li.className = 'talent-pool-item';
         li.innerHTML = `
-            <input type="checkbox" id="candidato-${candidato.id}" data-id="${candidato.id}">
-            <label for="candidato-${candidato.id}">${candidato.nombre_candidato} (${(candidato.texto_cv || '').substring(0, 50)}...)</label>
+            <input type="checkbox" id="candidato-${candidato.id}" value="${candidato.id}">
+            <label for="candidato-${candidato.id}">${candidato.nombre_candidato || 'Candidato sin nombre'} (${candidato.email || 'Sin email'})</label>
         `;
         talentPoolList.appendChild(li);
     });
+    updateMatchButtonState();
 }
 
-async function processSelectedCandidates(targetAvisoId) {
-    const selectedIds = Array.from(talentPoolList.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(cb => parseInt(cb.dataset.id));
+function updateMatchButtonState() {
+    const checkedCount = talentPoolList.querySelectorAll('input[type="checkbox"]:checked').length;
+    matchBtn.disabled = checkedCount === 0;
+}
 
-    if (selectedIds.length === 0) {
-        alert('Por favor, selecciona al menos un candidato.');
-        return;
-    }
+async function processSelectedCandidates() {
+    const seleccionadosIds = Array.from(talentPoolList.querySelectorAll('input[type="checkbox"]:checked'))
+                               .map(input => parseInt(input.value, 10));
+
+    if (seleccionadosIds.length === 0) return alert("Por favor, selecciona al menos un candidato.");
+    if (!confirm(`¿Confirmas que quieres enviar a ${seleccionadosIds.length} candidato(s) para ser analizados?`)) return;
 
     matchBtn.disabled = true;
-    matchingStatus.textContent = `Procesando ${selectedIds.length} candidatos...`;
-    matchingStatus.classList.remove('hidden');
+    matchBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Creando Evaluaciones...`;
+    
+    try {
+        const nuevasEvaluaciones = seleccionadosIds.map(candidatoId => ({
+            candidato_id: candidatoId,
+            aviso_id: avisoActivo.id
+        }));
 
-    const selectedCandidatos = currentTalentPool.filter(c => selectedIds.includes(c.id));
+        const { error } = await supabase
+            .from('evaluaciones')
+            .upsert(nuevasEvaluaciones, { onConflict: 'candidato_id, aviso_id', ignoreDuplicates: true });
 
-    for (const candidato of selectedCandidatos) {
-        try {
-            const { error } = await supabase.functions.invoke('process-generic-cv', {
-                body: {
-                    record: candidato
-                }
-            });
-            if (error) throw error;
-        } catch (e) {
-            console.error(`Error procesando al candidato ${candidato.nombre_candidato}:`, e);
-        }
-    }
+        if (error) throw error;
 
-    matchingStatus.textContent = `¡${selectedIds.length} candidatos enviados a análisis! Revisa la página de resúmenes.`;
-    setTimeout(() => {
-        matchingStatus.classList.add('hidden');
+        matchingStatus.innerHTML = `<strong>¡Éxito!</strong> ${seleccionadosIds.length} candidato(s) enviados para análisis. Redirigiendo...`;
+        matchingStatus.classList.remove('hidden');
+        
+        setTimeout(() => {
+            window.location.href = `resumenes.html?avisoId=${avisoActivo.id}`;
+        }, 3000);
+
+    } catch (error) {
+        console.error("Error al crear las evaluaciones:", error);
+        matchingStatus.innerHTML = `<strong>Error:</strong> No se pudieron crear las evaluaciones. ${error.message}`;
+        matchingStatus.classList.remove('hidden');
         matchBtn.disabled = false;
-        talentPoolContainer.classList.add('hidden');
-        folderSelector.value = '';
-    }, 5000);
+        matchBtn.innerHTML = `Reintentar Envío`;
+    }
 }
 
-
-// --- ✨ NUEVAS FUNCIONES PARA MODO EDICIÓN ✨ ---
-
+// --- LÓGICA DEL MODO EDICIÓN ---
 function toggleEditMode(isEditing) {
     const viewItems = document.querySelectorAll('.view-mode-item');
     const editItems = document.querySelectorAll('.edit-mode-item');
@@ -309,7 +300,6 @@ function toggleEditMode(isEditing) {
         editItems.forEach(el => el.classList.add('hidden'));
     }
 }
-
 async function guardarCambiosAviso() {
     if (!avisoActivo) return;
 
@@ -342,7 +332,6 @@ async function guardarCambiosAviso() {
     saveEditBtn.disabled = false;
     saveEditBtn.textContent = 'Guardar Cambios';
 }
-
 function renderizarCondicionesParaEdicion(lista, array, tipo) {
     lista.innerHTML = '';
     array.forEach((condicion, index) => {

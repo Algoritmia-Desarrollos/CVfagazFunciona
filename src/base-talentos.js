@@ -57,46 +57,51 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadCandidatesByFolder(folderId) {
     candidatosCache = [];
     currentTablePage = 1;
-    talentosListBody.innerHTML = ''; // Limpiar la tabla al iniciar una nueva carga
+    talentosListBody.innerHTML = '';
     loadingIndicator.classList.remove('hidden');
     loadedCountSpan.textContent = '0';
     totalCountSpan.textContent = '...';
     handlePageChange();
 
     const folderIds = (folderId && folderId !== 'none') ? getAllSubfolderIds(Number(folderId)) : [];
+    
     let countQuery = supabase.from('candidatos').select('id', { count: 'exact', head: true });
-    if (folderId === 'none') { countQuery = countQuery.is('carpeta_id', null); }
-    else if (folderId !== null) { countQuery = countQuery.in('carpeta_id', folderIds); }
+    if (folderId === 'none') {
+        countQuery = countQuery.is('carpeta_id', null);
+    } else if (folderId !== null) {
+        countQuery = countQuery.in('carpeta_id', folderIds);
+    }
     const { count, error: countError } = await countQuery;
 
     if (countError || count === 0) {
         loadingIndicator.classList.add('hidden');
-        talentosListBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">${count === 0 ? 'No hay candidatos' : 'Error'}</td></tr>`;
+        talentosListBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">${count === 0 ? 'No hay candidatos' : 'Error al contar'}</td></tr>`;
         return;
     }
 
     totalCountSpan.textContent = count;
-    const batchSize = 5;
-
-    for (let i = 0; i < count; i += batchSize) {
-        let query = supabase.rpc('get_candidatos_with_folder_path');
-        if (folderId === 'none') { query = query.is('carpeta_id', null); }
-        else if (folderId !== null) { query = query.in('carpeta_id', folderIds); }
-
-        const { data, error } = await query
-            .order('nombre_candidato', { ascending: true })
-            .range(i, i + batchSize - 1);
-
-        if (error) { break; }
-
-        if (data.length > 0) {
-            candidatosCache.push(...data);
-            renderTableRows(data, true); // El 'true' indica que debe añadir y no reemplazar
-            loadedCountSpan.textContent = candidatosCache.length;
-        }
-        await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Ahora hacemos una consulta directa en lugar de un RPC
+    let query = supabase.from('candidatos').select('*');
+    if (folderId === 'none') {
+        query = query.is('carpeta_id', null);
+    } else if (folderId !== null) {
+        query = query.in('carpeta_id', folderIds);
     }
 
+    const { data, error } = await query
+        .order('nombre_candidato', { ascending: true })
+        .range(0, count -1); // Cargar todos de una vez, ya que el renderizado es progresivo
+
+    if (error) {
+        loadingIndicator.classList.add('hidden');
+        talentosListBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Error al cargar candidatos.</td></tr>`;
+        return;
+    }
+
+    candidatosCache = data;
+    handlePageChange(); // Renderiza la primera página
+    loadedCountSpan.textContent = candidatosCache.length;
     loadingIndicator.classList.add('hidden');
 }
 
@@ -231,6 +236,7 @@ function renderTablePage(sourceData) {
 // Y modifica renderTableRows (o créala si no existe) así:
 function renderTableRows(candidatos, append = false) {
     if (!append) talentosListBody.innerHTML = '';
+    
     candidatos.forEach(candidato => {
         const row = document.createElement('tr');
         row.dataset.id = candidato.id;
@@ -253,17 +259,21 @@ function renderTableRows(candidatos, append = false) {
                 checkbox.dispatchEvent(changeEvent);
             }
         });
-        // ... (toda la lógica de drag-drop y selección de fila se mantiene)
+
+        // Buscamos el nombre de la carpeta en la caché que ya tenemos cargada
+        const carpeta = carpetasCache.find(c => c.id === candidato.carpeta_id);
+        const folderName = carpeta ? carpeta.nombre : 'Sin Carpeta';
+
         row.innerHTML = `
             <td><input type="checkbox" class="candidate-checkbox" data-id="${candidato.id}"></td>
             <td><strong>${candidato.nombre_candidato || 'No extraído'}</strong><br><span class="text-light">${candidato.nombre_archivo || ''}</span></td>
-            <td title="${candidato.folder_path || 'Sin Carpeta'}">${candidato.folder_path || '<em>Sin Carpeta</em>'}</td>
+            <td title="${folderName}">${folderName === 'Sin Carpeta' ? '<em>Sin Carpeta</em>' : folderName}</td>
             <td>${candidato.email || 'No extraído'}<br>${candidato.telefono || 'No extraído'}</td>
             <td class="actions-group">
-              <button class="btn btn-secondary view-text-btn" data-id="${candidato.id}">Ver Texto</button>
-              <a href="${candidato.base64}" download="${candidato.nombre_archivo}" class="btn btn-primary">Ver CV</a>
-              <button class="icon-btn delete-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-trash-can"></i></button>
-              <button class="icon-btn edit-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-pencil"></i></button>
+                <button class="btn btn-secondary view-text-btn" data-id="${candidato.id}">Ver Texto</button>
+                <a href="${candidato.base64}" download="${candidato.nombre_archivo}" class="btn btn-primary">Ver CV</a>
+                <button class="icon-btn delete-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-trash-can"></i></button>
+                <button class="icon-btn edit-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-pencil"></i></button>
             </td>
         `;
         addDropTarget(row);
