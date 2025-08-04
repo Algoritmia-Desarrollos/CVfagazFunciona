@@ -983,3 +983,9 @@ a:hover {
   color: var(--text-dark);
   margin: 0 0 0.5rem 0;
 }
+
+@media (max-width: 768px) {
+  .public-page-body {
+    overflow-y: hidden;
+  }
+}
