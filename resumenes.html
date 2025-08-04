@@ -46,9 +46,16 @@
       </div>
       
       <div class="table-container">
+        <div id="bulk-actions-resumenes" class="bulk-actions-container hidden" style="margin-bottom: 1rem;">
+            <button id="bulk-delete-evaluaciones-btn" class="btn btn-danger">
+                <i class="fa-solid fa-trash-can"></i>
+                Eliminar seleccionados de esta búsqueda
+            </button>
+        </div>
         <table id="cv-table" class="data-table">
           <thead>
             <tr>
+              <th><input type="checkbox" id="select-all-checkbox-resumenes"></th>
               <th>Archivo</th>
               <th>Nombre Candidato</th>
               <th>Calificación</th>

@@ -15,6 +15,9 @@ const modalSaveNotesBtn = document.getElementById('modal-save-notes');
 const modalCancelBtn = document.getElementById('modal-cancel');
 const uploadCvBtn = document.getElementById('upload-cv-btn');
 const fileInputResumenes = document.getElementById('file-input-resumenes');
+const selectAllCheckbox = document.getElementById('select-all-checkbox-resumenes');
+const bulkActionsContainer = document.getElementById('bulk-actions-resumenes');
+const bulkDeleteBtn = document.getElementById('bulk-delete-evaluaciones-btn');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 let archivosCache = [];
@@ -27,7 +30,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (!avisoId) {
         panelTitle.textContent = 'Error';
-        resumenesList.innerHTML = '<tr><td colspan="6">No se ha especificado una búsqueda.</td></tr>';
+        resumenesList.innerHTML = '<tr><td colspan="7">No se ha especificado una búsqueda.</td></tr>';
         return;
     }
 
@@ -38,7 +41,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error("Error al cargar datos iniciales:", error);
         panelTitle.textContent = 'Error de Carga';
-        resumenesList.innerHTML = `<tr><td colspan="6">No se pudo cargar el aviso.</td></tr>`;
+        resumenesList.innerHTML = `<tr><td colspan="7">No se pudo cargar el aviso.</td></tr>`;
     }
 });
 
@@ -50,7 +53,7 @@ async function cargarYProcesarCandidatos(avisoId) {
 
     if (evaluaciones.length === 0) {
         processingStatus.textContent = "Aún no hay candidatos para esta búsqueda.";
-        resumenesList.innerHTML = `<tr><td colspan="6" style="text-align: center;">Nadie se ha postulado todavía.</td></tr>`;
+        resumenesList.innerHTML = `<tr><td colspan="7" style="text-align: center;">Nadie se ha postulado todavía.</td></tr>`;
     } else {
         actualizarVistaCandidatos();
     }
@@ -63,7 +66,7 @@ async function cargarYProcesarCandidatos(avisoId) {
         processingStatus.innerHTML = `<p>Analizando ${nuevasEvaluaciones.length} nuevos CVs...</p>`;
         
         for (const [index, evaluacion] of nuevasEvaluaciones.entries()) {
-            processingStatus.innerHTML = `<p>Procesando ${index + 1} de ${nuevasEvaluaciones.length}... (${evaluacion.nombre_archivo})</p>`;
+            processingStatus.textContent = `Procesando ${index + 1} de ${nuevasEvaluaciones.length}... (${evaluacion.nombre_archivo})`;
             
             if (evaluacion.calificacion === -1) {
                 evaluacion.calificacion = null;
@@ -71,8 +74,14 @@ async function cargarYProcesarCandidatos(avisoId) {
             }
 
             try {
+                if (!evaluacion.base64) {
+                    const { data: candidatoConBase64, error } = await supabase.from('candidatos').select('base64').eq('id', evaluacion.id).single();
+                    if (error || !candidatoConBase64) throw new Error("No se pudo obtener el contenido del CV para análisis.");
+                    evaluacion.base64 = candidatoConBase64.base64;
+                }
+
                 const textoCV = evaluacion.texto_cv || await extraerTextoDePDF(evaluacion.base64);
-                if (!textoCV || textoCV.trim().length < 50) throw new Error("PDF vacío o ilegible.");
+                if (!textoCV || textoCV.trim().length < 50) throw new Error("PDF vacío o con texto ilegible.");
 
                 const iaData = await calificarCVConIA(textoCV, avisoActivo);
                 
@@ -100,13 +109,12 @@ async function cargarYProcesarCandidatos(avisoId) {
             }
             actualizarFilaEnVista(evaluacion.id);
         }
-        processingStatus.innerHTML = "<p>Análisis completado.</p>";
+        processingStatus.textContent = "Análisis completado.";
     } else {
-        processingStatus.innerHTML = "<p style='margin-bottom: 1rem;'>Todos los candidatos están calificados.</p>";
+        processingStatus.textContent = "Todos los candidatos están calificados.";
     }
 }
 
-// LÓGICA PARA CARGA DIRECTA DE CVs
 if (uploadCvBtn) {
     uploadCvBtn.addEventListener('click', () => {
         fileInputResumenes.click();
@@ -119,7 +127,7 @@ if (fileInputResumenes) {
         if (!files.length || !avisoActivo) return;
 
         uploadCvBtn.disabled = true;
-        processingStatus.innerHTML = `<p>Agregando ${files.length} nuevo(s) CV(s)...</p>`;
+        uploadCvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cargando...';
         
         for (const file of files) {
             try {
@@ -149,11 +157,10 @@ if (fileInputResumenes) {
         
         await cargarYProcesarCandidatos(avisoActivo.id); 
         uploadCvBtn.disabled = false;
+        uploadCvBtn.innerHTML = '<i class="fa-solid fa-upload"></i> Cargar CV';
         fileInputResumenes.value = '';
     });
 }
-
-// --- FUNCIONES AUXILIARES Y DE RENDERIZADO ---
 
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -175,7 +182,7 @@ async function getCandidatosByAvisoId(avisoId) {
         .from('evaluaciones')
         .select(`
             id, calificacion, resumen, notas,
-            candidatos (id, nombre_candidato, email, telefono, nombre_archivo, base64, texto_cv)
+            candidatos (id, nombre_candidato, email, telefono, nombre_archivo, texto_cv)
         `)
         .eq('aviso_id', avisoId);
 
@@ -249,15 +256,19 @@ function actualizarVistaCandidatos() {
     
     resumenesList.innerHTML = '';
     if (candidatosFiltrados.length === 0) {
-        resumenesList.innerHTML = '<tr><td colspan="6" style="text-align: center;">No se encontraron candidatos.</td></tr>';
+        resumenesList.innerHTML = '<tr><td colspan="7" style="text-align: center;">No se encontraron candidatos.</td></tr>';
     } else {
         candidatosFiltrados.forEach(cv => renderizarFila(cv, true));
     }
+    addActionListeners();
 }
 
 function actualizarFilaEnVista(cvId) {
     const cv = archivosCache.find(c => c.id === cvId);
-    if (cv) renderizarFila(cv, false);
+    if (cv) {
+        renderizarFila(cv, false);
+        addActionListeners();
+    }
 }
 
 function renderizarFila(cv, esNueva) {
@@ -268,7 +279,9 @@ function renderizarFila(cv, esNueva) {
         calificacionMostrada = `<strong>${cv.calificacion} / 100</strong>`;
     }
     const notasClass = cv.notas ? 'has-notes' : '';
+    
     const rowHTML = `
+        <td><input type="checkbox" class="evaluation-checkbox" data-evaluation-id="${cv.evaluacion_id}"></td>
         <td>${cv.nombre_archivo || 'N/A'}</td>
         <td><strong>${cv.nombre_candidato || 'No extraído'}</strong></td>
         <td>${calificacionMostrada}</td>
@@ -276,7 +289,7 @@ function renderizarFila(cv, esNueva) {
         <td><button class="btn btn-secondary ${notasClass}" data-action="ver-notas">Notas</button></td>
         <td>
             <div class="actions-group">
-                <a href="${cv.base64}" download="${cv.nombre_archivo}" class="btn btn-primary">Ver CV</a>
+                <button class="btn btn-primary download-cv-btn" data-id="${cv.id}">Ver CV</button>
                 <button class="btn btn-secondary" data-action="ver-contacto" ${cv.calificacion === null || cv.calificacion === -1 ? 'disabled' : ''}>Contacto</button>
             </div>
         </td>
@@ -285,6 +298,17 @@ function renderizarFila(cv, esNueva) {
         const newRow = document.createElement('tr');
         newRow.dataset.id = cv.id;
         newRow.innerHTML = rowHTML;
+        newRow.addEventListener('click', (e) => {
+            if (e.target.closest('a') || e.target.closest('button') || e.target.matches('input[type="checkbox"]')) {
+                return;
+            }
+            const checkbox = newRow.querySelector('.evaluation-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                const changeEvent = new Event('change', { bubbles: true });
+                checkbox.dispatchEvent(changeEvent);
+            }
+        });
         resumenesList.appendChild(newRow);
     } else {
         const existingRow = resumenesList.querySelector(`tr[data-id='${cv.id}']`);
@@ -295,7 +319,7 @@ function renderizarFila(cv, esNueva) {
 filtroNombre.addEventListener('input', actualizarVistaCandidatos);
 
 resumenesList.addEventListener('click', (e) => {
-    const button = e.target.closest('.btn');
+    const button = e.target.closest('.btn:not(.download-cv-btn)');
     if (!button) return;
     const row = e.target.closest('tr');
     const cvId = parseInt(row.dataset.id, 10);
@@ -309,7 +333,84 @@ resumenesList.addEventListener('click', (e) => {
     }
 });
 
-// --- LÓGICA DE MODALES ---
+resumenesList.addEventListener('change', (e) => {
+    if (e.target.matches('.evaluation-checkbox')) {
+        updateBulkActionsVisibility();
+    }
+});
+
+selectAllCheckbox.addEventListener('change', () => {
+    resumenesList.querySelectorAll('.evaluation-checkbox').forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    updateBulkActionsVisibility();
+});
+
+bulkDeleteBtn.addEventListener('click', deleteSelectedEvaluations);
+
+function addActionListeners() {
+    resumenesList.querySelectorAll('.download-cv-btn:not(.listener-added)').forEach(button => {
+        button.classList.add('listener-added');
+        button.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const btn = e.target.closest('button');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            const candidateId = btn.dataset.id;
+            try {
+                const { data, error } = await supabase
+                    .from('candidatos')
+                    .select('base64, nombre_archivo')
+                    .eq('id', candidateId)
+                    .single();
+                if (error) throw error;
+                const link = document.createElement('a');
+                link.href = data.base64;
+                link.download = data.nombre_archivo || 'cv.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (err) {
+                alert("No se pudo descargar el CV.");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    });
+}
+
+function getSelectedEvaluationIds() {
+    return Array.from(resumenesList.querySelectorAll('.evaluation-checkbox:checked'))
+        .map(cb => parseInt(cb.dataset.evaluationId, 10));
+}
+
+function updateBulkActionsVisibility() {
+    const selectedCount = getSelectedEvaluationIds().length;
+    bulkActionsContainer.classList.toggle('hidden', selectedCount === 0);
+}
+
+async function deleteSelectedEvaluations() {
+    const idsToDelete = getSelectedEvaluationIds();
+    if (idsToDelete.length === 0) return;
+
+    if (confirm(`¿Estás seguro de que quieres eliminar a ${idsToDelete.length} candidato(s) de esta búsqueda? (Los candidatos no se eliminarán de tu base de datos general).`)) {
+        const { error } = await supabase
+            .from('evaluaciones')
+            .delete()
+            .in('id', idsToDelete);
+
+        if (error) {
+            alert("Error al eliminar las evaluaciones.");
+            console.error(error);
+        } else {
+            alert("Candidatos eliminados de la búsqueda exitosamente.");
+            await cargarYProcesarCandidatos(avisoActivo.id);
+        }
+    }
+}
+
 function abrirModalResumen(cv) {
     modalTitle.textContent = `Análisis de ${cv.nombre_candidato || 'Candidato'}`;
     modalBody.innerHTML = `<h4>Calificación: ${cv.calificacion}/100</h4><p>${cv.resumen || 'No hay análisis.'}</p>`;
