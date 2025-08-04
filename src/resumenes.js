@@ -97,7 +97,16 @@ async function cargarYProcesarCandidatos(avisoId) {
                     resumen: iaData.justificacion
                 }).eq('id', evaluacion.evaluacion_id);
 
-                Object.assign(evaluacion, iaData);
+                // Actualizar el objeto en la caché principal
+                const cacheIndex = archivosCache.findIndex(c => c.id === evaluacion.id);
+                if (cacheIndex > -1) {
+                    // Mapear campos de iaData a los nombres de columna correctos
+                    archivosCache[cacheIndex].nombre_candidato = iaData.nombreCompleto;
+                    archivosCache[cacheIndex].email = iaData.email;
+                    archivosCache[cacheIndex].telefono = iaData.telefono;
+                    archivosCache[cacheIndex].calificacion = iaData.calificacion;
+                    archivosCache[cacheIndex].resumen = iaData.justificacion;
+                }
                 
             } catch (error) {
                 console.error(`Falló el procesamiento para el CV ${evaluacion.id}:`, error);
@@ -280,10 +289,14 @@ function renderizarFila(cv, esNueva) {
     }
     const notasClass = cv.notas ? 'has-notes' : '';
     
+    const nombreMostrado = cv.calificacion === null 
+        ? '<em>Analizando...</em>' 
+        : `<strong>${cv.nombre_candidato || 'No extraído'}</strong>`;
+
     const rowHTML = `
         <td><input type="checkbox" class="evaluation-checkbox" data-evaluation-id="${cv.evaluacion_id}"></td>
         <td>${cv.nombre_archivo || 'N/A'}</td>
-        <td><strong>${cv.nombre_candidato || 'No extraído'}</strong></td>
+        <td>${nombreMostrado}</td>
         <td>${calificacionMostrada}</td>
         <td><button class="btn btn-secondary" data-action="ver-resumen" ${cv.calificacion === null || cv.calificacion === -1 ? 'disabled' : ''}>Análisis IA</button></td>
         <td><button class="btn btn-secondary ${notasClass}" data-action="ver-notas">Notas</button></td>
