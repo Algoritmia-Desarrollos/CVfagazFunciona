@@ -118,25 +118,40 @@ cvForm.addEventListener('submit', async (e) => {
 });
 
 /**
- * Esta función prepara el objeto del candidato y lo inserta en Supabase.
- * Nota cómo NO se incluye un campo "id", ya que la base de datos
- * (una vez configurada con "Is Identity") se encargará de generarlo.
+ * Guarda un nuevo candidato y crea la evaluación correspondiente.
  */
 async function guardarCVEnSupabase(nombre, base64, avisoId) {
-    const nuevoCandidato = {
-      aviso_id: avisoId,
-      nombre_archivo: nombre,
-      base64: base64,
-      // El resto de los campos (resumen, calificación, etc.) se dejan nulos
-      // para que el proceso de IA los llene después.
+    // 1. Insertar en la tabla 'candidatos'
+    const candidatoData = {
+        nombre_archivo: nombre,
+        base64: base64,
     };
 
-    // Aquí es donde se intenta insertar en la base de datos.
-    // Si la columna 'id' no es autoincremental, esta línea falla.
-    const { error } = await supabase.from('candidatos').insert(nuevoCandidato);
+    const { data: nuevoCandidato, error: candidatoError } = await supabase
+        .from('candidatos')
+        .insert(candidatoData)
+        .select()
+        .single();
 
-    if (error) {
-        // Si Supabase devuelve un error, se lanza para que el bloque .catch() lo muestre.
-        throw new Error(error.message);
+    if (candidatoError) {
+        console.error("Error al insertar candidato:", candidatoError);
+        throw new Error(candidatoError.message);
+    }
+
+    // 2. Insertar en la tabla 'evaluaciones' usando el ID del candidato recién creado
+    const evaluacionData = {
+        candidato_id: nuevoCandidato.id,
+        aviso_id: avisoId,
+    };
+
+    const { error: evaluacionError } = await supabase
+        .from('evaluaciones')
+        .insert(evaluacionData);
+
+    if (evaluacionError) {
+        // Si falla la creación de la evaluación, es buena idea eliminar el candidato para no dejar datos huérfanos.
+        console.error("Error al crear evaluación, revirtiendo inserción de candidato:", evaluacionError);
+        await supabase.from('candidatos').delete().eq('id', nuevoCandidato.id);
+        throw new Error(evaluacionError.message);
     }
 }
