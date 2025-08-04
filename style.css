@@ -960,10 +960,10 @@ a:hover {
 .public-page-wrapper {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   min-height: 100vh;
-  padding-top: 1rem;
-  padding-bottom: 4rem;
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
 .public-upload-container {
@@ -987,5 +987,10 @@ a:hover {
 @media (max-width: 768px) {
   .public-page-body {
     overflow-y: hidden;
+  }
+
+  body.public-page-body .public-page-wrapper {
+    align-items: flex-start;
+    padding: 5px 1rem 2rem;
   }
 }
