@@ -130,6 +130,15 @@ function populateUI(aviso) {
     linkPostulanteInput.value = publicLink;
     abrirLinkBtn.href = publicLink;
 
+    copiarLinkBtn.addEventListener('click', () => {
+        linkPostulanteInput.select();
+        document.execCommand('copy');
+        copiarLinkBtn.textContent = '¡Copiado!';
+        setTimeout(() => {
+            copiarLinkBtn.textContent = 'Copiar Link';
+        }, 2000);
+    });
+
     new QRious({
         element: qrCanvas,
         value: publicLink,
