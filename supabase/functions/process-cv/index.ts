@@ -81,42 +81,40 @@ Deno.serve(async (req) => {
 
     ---
 
-    **METODOLOGÍA DE EVALUACIÓN ESTRUCTURADA (SEGUIR ESTRICTAMENTE CADA PASO):**
+   **METODOLOGÍA DE EVALUACIÓN ESTRUCTURADA Y SISTEMA DE PUNTUACIÓN (SEGUIR ESTRICTAMENTE):**
 
-    **PASO 1: Extracción de Datos Fundamentales.**
-    Primero, identifica y extrae los siguientes datos clave del candidato. Si un dato no está presente, usa null.
-    - nombreCompleto: Busca el nombre más prominente, usualmente al principio del documento. Ignora "Curriculum Vitae", "CV", "Nombre:", etc. Intenta capturar nombre y al menos un apellido.
-    - email: Busca patrones claros de email con "@". Extrae solo la dirección. Si hay varios, elige el más profesional.
-    - telefono: Reconoce múltiples formatos (con/sin prefijos +, guiones, espacios). Prioriza números móviles si hay varios.
+**PASO 1: Extracción de Datos Fundamentales.**
+Primero, extrae los siguientes datos clave. Si un dato no está presente, usa null.
+-   nombreCompleto: El nombre más prominente del candidato.
+-   email: El correo electrónico más profesional que encuentres.
+-   telefono: El número de teléfono principal, priorizando móviles.
 
-    **PASO 2: Análisis de Relevancia y Coincidencia Directa (Filtro Crítico).**
-    Este es el paso más importante. Antes de cualquier otra cosa, determina el grado de "match" directo entre el CV y el aviso.
-    - Coincidencia de Puesto (ALTA PRIORIDAD): ¿Ha ocupado el candidato un puesto con un título idéntico o muy similar al del aviso? ¿Las funciones que describe en esa experiencia coinciden con la descripción del aviso? Una coincidencia fuerte aquí es el indicador más positivo y debe ser el factor principal de la calificación.
-    - Análisis de Condiciones Necesarias (Excluyentes): Verifica metódica y literalmente cada una de las condiciones. Si el candidato NO CUMPLE ni siquiera una de estas condiciones, la calificación NO PUEDE superar los 40 puntos, sin importar qué otros méritos tenga. Este es un filtro no negociable. Si cumple todas, tiene una base sólida para una buena calificación.
-    - Análisis de Condiciones Deseables (Suman Puntos): Revisa cuántas de estas condiciones cumple. Cada coincidencia no solo suma puntos, sino que refuerza la idoneidad del candidato.
+**PASO 2: Sistema de Calificación Ponderado (Puntuación de 0 a 100).**
+Calcularás la nota final siguiendo este sistema de puntos que refleja las prioridades del reclutador.
 
-    **PASO 3: Análisis Cualitativo del Perfil (Peso Secundario).**
-    Una vez establecido el "match" técnico, evalúa la calidad del candidato.
-    - Progresión y Estabilidad: ¿Muestra un crecimiento lógico en sus roles? ¿Su estabilidad laboral es coherente con el sector o presenta cambios demasiado frecuentes que puedan ser una señal de alerta?
-    - Logros Cuantificables: ¿El candidato demuestra su impacto con datos y métricas (ej: "reduje costos en un 10%") o solo lista tareas? Los logros concretos son mucho más valiosos.
-    - Habilidades y Tecnologías Adicionales: ¿Menciona herramientas, software o habilidades que, aunque no se pidieron, son claramente relevantes y valiosas para el puesto?
+**A. FILTRO CRÍTICO: Condiciones Necesarias (Ponderación: Máxima - Regla de Knock-Out)**
+   - Verifica metódica y literalmente CADA UNA de las "Condiciones Necesarias".
+   - **SI EL CANDIDATO NO CUMPLE CON ABSOLUTAMENTE TODAS las condiciones, el proceso se detiene aquí.** Asigna una calificación final entre **1 y 40 puntos** y en la justificación explica claramente cuál requisito excluyente faltó.
+   - **SI CUMPLE CON TODAS**, el candidato "aprueba" este filtro y se le otorga una **base de 50 puntos**. Continúa al siguiente paso para sumar puntos adicionales.
 
-    **PASO 4: Sistema de Calificación Numérica (1-100).**
-    Sintetiza tu análisis en un número, basándote en la siguiente escala de criterio:
-    - 1-40 (Descartado): No cumple con una o más Condiciones Necesarias. O el perfil es de un campo completamente diferente.
-    - 41-65 (Bajo Potencial): Cumple las condiciones necesarias "por los pelos", pero no tiene experiencia directa en el rol y carece de la mayoría de las deseables.
-    - 66-85 (Sólido / Recomendado): Cumple TODAS las condiciones necesarias y varias de las deseables. Su experiencia laboral es muy similar o directamente transferible al puesto del aviso. Este es el rango para un buen candidato que encaja bien.
-    - 86-100 (Excepcional / Prioritario): Cumple TODO lo necesario y la mayoría de lo deseable. Crucialmente, ya ha trabajado en un puesto idéntico o casi idéntico al del aviso, demostrando éxito y logros en él. Es un candidato ideal.
+**B. ANÁLISIS SECUNDARIO: Condiciones Deseables (Ponderación: Alta - hasta 25 Puntos Adicionales)**
+   - Si el candidato aprobó el Paso A, ahora evalúa las "Condiciones Deseables".
+   - Por CADA condición deseable que el candidato cumpla, suma la cantidad de puntos correspondiente (**25 Puntos / Total de Condiciones Deseables**). Sé estricto; si solo cumple parcialmente, otorga la mitad de los puntos para esa condición.
 
-    **PASO 5: Elaboración de la Justificación Profesional.**
-    Redacta un párrafo único y conciso que resuma tu dictamen. Estructúralo así:
-    - Veredicto Inicial: Comienza con una afirmación clara sobre el nivel de "match" (Ej: "El candidato presenta un match directo y fuerte con la búsqueda..." o "El perfil no cumple con los requisitos excluyentes clave...").
-    - Argumento Central: Justifica el veredicto mencionando explícitamente qué condiciones necesarias y deseables cumple o no. Destaca si tiene experiencia previa en el mismo rol.
-    - Conclusión y Recomendación: Cierra con una síntesis que conecte el análisis con la nota y una recomendación clara (Ej: "...lo que resulta en una calificación de 88/100. Se recomienda una entrevista inmediata." o "...resultando en una calificación de 35/100 por no cumplir con el requisito de experiencia mínima. Se recomienda descartar.").
+**C. ANÁLISIS DE EXPERIENCIA: Match con la Descripción (Ponderación: Media - hasta 25 Puntos Adicionales)**
+   - Evalúa la calidad y relevancia de la experiencia laboral del candidato en relación con la descripción del puesto.
+   - **Coincidencia de Rol y Funciones (hasta 15 puntos):** ¿La experiencia es en un puesto con un título y funciones idénticos o muy similares al del aviso? Un match perfecto (mismo rol, mismas tareas) otorga los 15 puntos. Un match parcial (rol diferente pero con tareas transferibles) otorga entre 5 y 10 puntos.
+   - **Calidad del Perfil (hasta 10 puntos):** Evalúa la calidad general del CV. ¿Muestra una progresión de carrera lógica? ¿Es estable laboralmente? ¿Presenta logros cuantificables (ej: "aumenté ventas 15%") en lugar de solo listar tareas? Un CV con logros claros y buena estabilidad obtiene más puntos.
 
-    **Formato de Salida (JSON estricto):**
-    Devuelve un objeto JSON con 5 claves: "nombreCompleto", "email", "telefono", "calificacion" (número entero) y "justificacion" (el string de texto).
-    `;
+**PASO 3: Elaboración de la Justificación Profesional.**
+Redacta un párrafo único y conciso que resuma tu dictamen, justificando la nota final basándote en el sistema de puntos.
+   - **Veredicto Inicial:** Comienza con una afirmación clara. Si fue descartado, indícalo (Ej: "Perfil descartado por no cumplir con el requisito excluyente de..."). Si aprobó, describe el nivel de "match" (Ej: "El candidato presenta un perfil muy competitivo...").
+   - **Argumento Central:** Justifica la nota mencionando explícitamente los puntos obtenidos. (Ej: "Cumple con todas las condiciones necesarias (Base 50 pts), cumple 2 de 3 condiciones deseables (+16.6 pts) y su experiencia tiene un match fuerte con la descripción (+12 pts)...").
+   - **Conclusión y Recomendación:** Cierra con la nota final calculada y una recomendación clara. (Ej: "...resultando en una calificación final de 79/100. Se recomienda una entrevista." o "...resultando en una calificación de 35/100. Se recomienda descartar.").
+
+**Formato de Salida (JSON estricto):**
+Devuelve un objeto JSON con 5 claves: "nombreCompleto", "email", "telefono", "calificacion" (el número entero final calculado) y "justificacion" (el string de texto).
+`;
 
     const chatCompletion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
