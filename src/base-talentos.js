@@ -101,7 +101,8 @@ async function loadCandidatesByFolder(folderId) {
     totalCountSpan.textContent = count;
     
     // Ahora hacemos una consulta directa en lugar de un RPC
-    let query = supabase.from('candidatos').select('*');
+    // ✨ CAMBIO: Se excluye la columna 'base64' para optimizar la carga inicial
+    let query = supabase.from('candidatos').select('id, nombre_candidato, email, telefono, nombre_archivo, carpeta_id, texto_cv');
     if (folderId === 'none') {
         query = query.is('carpeta_id', null);
     } else if (folderId !== null) {
@@ -291,7 +292,6 @@ function renderTableRows(candidatos, append = false) {
             }
         });
 
-        // Buscamos el nombre de la carpeta en la caché que ya tenemos cargada
         const carpeta = carpetasCache.find(c => c.id === candidato.carpeta_id);
         const folderName = carpeta ? carpeta.nombre : 'Sin Carpeta';
 
@@ -302,7 +302,7 @@ function renderTableRows(candidatos, append = false) {
             <td>${candidato.email || 'No extraído'}<br>${candidato.telefono || 'No extraído'}</td>
             <td class="actions-group">
                 <button class="btn btn-secondary view-text-btn" data-id="${candidato.id}">Ver Texto</button>
-                <a href="${candidato.base64}" download="${candidato.nombre_archivo}" class="btn btn-primary">Ver CV</a>
+                <button class="btn btn-primary download-cv-btn" data-id="${candidato.id}">Ver CV</button>
                 <button class="icon-btn delete-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-trash-can"></i></button>
                 <button class="icon-btn edit-candidate-btn" data-id="${candidato.id}"><i class="fa-solid fa-pencil"></i></button>
             </td>
@@ -339,6 +339,43 @@ function addTableActionListeners() {
             if (candidato) openTextModal(candidato);
         });
     });
+
+    talentosListBody.querySelectorAll('.download-cv-btn:not(.listener-added)').forEach(button => {
+        button.classList.add('listener-added');
+        button.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const btn = e.target.closest('button');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            const candidateId = btn.dataset.id;
+            try {
+                const { data, error } = await supabase
+                    .from('candidatos')
+                    .select('base64, nombre_archivo')
+                    .eq('id', candidateId)
+                    .single();
+
+                if (error) throw error;
+
+                const link = document.createElement('a');
+                link.href = data.base64;
+                link.download = data.nombre_archivo || 'cv.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+            } catch (err) {
+                console.error("Error al descargar el CV:", err);
+                alert("No se pudo descargar el CV.");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    });
+
     talentosListBody.querySelectorAll('.edit-candidate-btn:not(.listener-added)').forEach(btn => {
         btn.classList.add('listener-added');
         btn.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(btn.dataset.id); });
