@@ -21,6 +21,7 @@ const selectAllCheckbox = document.getElementById('select-all-checkbox');
 const matchBtn = document.getElementById('match-btn');
 const matchingStatus = document.getElementById('matching-status');
 const editAvisoBtn = document.getElementById('edit-aviso-btn');
+const deleteAvisoBtn = document.getElementById('delete-aviso-btn');
 const saveEditBtn = document.getElementById('save-edit-btn');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
 const editTituloInput = document.getElementById('edit-titulo');
@@ -65,6 +66,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Listeners para Modo Edición
     editAvisoBtn.addEventListener('click', () => toggleEditMode(true));
+    deleteAvisoBtn.addEventListener('click', deleteAviso);
     cancelEditBtn.addEventListener('click', () => toggleEditMode(false));
     saveEditBtn.addEventListener('click', guardarCambiosAviso);
 
@@ -349,4 +351,27 @@ function renderizarCondicionesParaEdicion(lista, array, tipo) {
         item.innerHTML = `<span>${condicion}</span><button type="button" class="remove-btn" data-index="${index}" data-tipo="${tipo}">&times;</button>`;
         lista.appendChild(item);
     });
+}
+
+async function deleteAviso() {
+    if (!avisoActivo) return;
+
+    const confirmation = confirm(`¿Estás seguro de que quieres eliminar el aviso "${avisoActivo.titulo}"? Esta acción no se puede deshacer.`);
+
+    if (confirmation) {
+        showSpinner();
+        const { error } = await supabase
+            .from('avisos')
+            .delete()
+            .eq('id', avisoActivo.id);
+        hideSpinner();
+
+        if (error) {
+            alert('Error al eliminar el aviso.');
+            console.error('Error deleting aviso:', error);
+        } else {
+            alert('Aviso eliminado correctamente.');
+            window.location.href = 'lista-avisos.html';
+        }
+    }
 }
