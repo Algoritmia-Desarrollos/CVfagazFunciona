@@ -39,16 +39,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     
     avisoActivo = aviso;
-    avisoContainer.innerHTML = `
-        <div class="aviso-header">
-            <h1>${avisoActivo.titulo}</h1>
-            <div class="aviso-meta">
-                <span><strong>Cierre:</strong> ${new Date(avisoActivo.valido_hasta).toLocaleDateString('es-AR', { timeZone: 'UTC' })}</span>
-                <span><strong>Cupo:</strong> ${avisoActivo.max_cv}</span>
-            </div>
-        </div>
-        <p class="descripcion">${avisoActivo.descripcion.replace(/\n/g, '<br>')}</p>
-    `;
+    avisoContainer.innerHTML = `<h1>Postúlate para: ${avisoActivo.titulo}</h1>`;
 });
 
 // --- Lógica de subida de archivo (Sin cambios) ---

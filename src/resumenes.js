@@ -14,6 +14,7 @@ const filtroNombre = document.getElementById('filtro-nombre');
 const modalSaveNotesBtn = document.getElementById('modal-save-notes');
 const modalCancelBtn = document.getElementById('modal-cancel');
 const uploadCvBtn = document.getElementById('upload-cv-btn');
+const showPublicLinkBtn = document.getElementById('show-public-link-btn');
 const fileInputResumenes = document.getElementById('file-input-resumenes');
 const selectAllCheckbox = document.getElementById('select-all-checkbox-resumenes');
 const bulkActionsContainer = document.getElementById('bulk-actions-resumenes');
@@ -37,6 +38,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         avisoActivo = await getAvisoById(avisoId);
         panelTitle.textContent = `Candidatos para: ${avisoActivo.titulo}`;
+        if (showPublicLinkBtn) {
+            const publicLink = `${window.location.origin}/index.html?avisoId=${avisoActivo.id}`;
+            showPublicLinkBtn.href = publicLink;
+        }
         await cargarYProcesarCandidatos(avisoId);
     } catch (error) {
         console.error("Error al cargar datos iniciales:", error);

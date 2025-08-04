@@ -893,3 +893,35 @@ a:hover {
   padding: 0;
   line-height: 1;
 }
+
+/* --- ESTILOS PARA PÁGINA PÚBLICA DE CARGA DE CV --- */
+.public-page-body {
+  background-color: var(--bg-light);
+}
+
+.public-page-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.public-upload-container {
+  width: 100%;
+  max-width: 550px;
+}
+
+.public-aviso-header {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.public-aviso-header h1 {
+  font-size: 1.75rem;
+  color: var(--text-dark);
+  margin: 0 0 0.5rem 0;
+}
