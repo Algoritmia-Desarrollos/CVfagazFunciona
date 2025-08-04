@@ -3,8 +3,12 @@ import { supabase } from './supabaseClient.js';
 // --- SELECTORES DE ELEMENTOS DEL DOM ---
 const folderList = document.getElementById('folder-list');
 const folderTitle = document.getElementById('folder-title');
+const showAddFolderFormBtn = document.getElementById('show-add-folder-form-btn');
+const addFolderForm = document.getElementById('add-folder-form');
 const addFolderBtn = document.getElementById('add-folder-btn');
+const cancelAddFolderBtn = document.getElementById('cancel-add-folder-btn');
 const newFolderNameInput = document.getElementById('new-folder-name');
+const parentFolderSelect = document.getElementById('parent-folder-select');
 const uploadToFolderBtn = document.getElementById('upload-to-folder-btn');
 const talentosListBody = document.getElementById('talentos-list-body');
 const filtroInput = document.getElementById('filtro-candidatos');
@@ -51,7 +55,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if(textModalContainer) textModalContainer.addEventListener('click', (e) => { if (e.target === textModalContainer) closeTextModal(); });
     if(textModalCloseBtn) textModalCloseBtn.addEventListener('click', closeTextModal);
+
+    showAddFolderFormBtn.addEventListener('click', () => toggleAddFolderForm(true));
+    cancelAddFolderBtn.addEventListener('click', () => toggleAddFolderForm(false));
 });
+
+function toggleAddFolderForm(show) {
+    if (show) {
+        populateParentFolderSelect();
+        addFolderForm.classList.remove('hidden');
+        showAddFolderFormBtn.classList.add('hidden');
+    } else {
+        addFolderForm.classList.add('hidden');
+        showAddFolderFormBtn.classList.remove('hidden');
+        newFolderNameInput.value = '';
+    }
+}
 
 // --- LÓGICA DE CARGA DE CANDIDATOS ---
 async function loadCandidatesByFolder(folderId) {
@@ -183,10 +202,22 @@ function setActiveFolder(selectedElement) {
 
 addFolderBtn.addEventListener('click', async () => {
     const name = newFolderNameInput.value.trim();
-    if (!name) return;
-    await supabase.from('carpetas').insert({ nombre: name, parent_id: null });
-    newFolderNameInput.value = '';
-    await loadFolders();
+    if (!name) {
+        alert("Por favor, introduce un nombre para la carpeta.");
+        return;
+    }
+    const parentId = parentFolderSelect.value ? parseInt(parentFolderSelect.value, 10) : null;
+
+    const { error } = await supabase.from('carpetas').insert({ nombre: name, parent_id: parentId });
+    
+    if (error) {
+        alert("Error al crear la carpeta.");
+        console.error(error);
+    } else {
+        newFolderNameInput.value = '';
+        toggleAddFolderForm(false);
+        await loadFolders();
+    }
 });
 
 async function editFolderName(folderId, folderDiv) {
@@ -385,6 +416,20 @@ function populateFolderSelect() {
         const folders = carpetasCache.filter(f => f.parent_id === parentId);
         folders.forEach(folder => {
             moveToFolderSelect.innerHTML += `<option value="${folder.id}">${prefix}${folder.nombre}</option>`;
+            buildOptions(folder.id, level + 1);
+        });
+    }
+    buildOptions();
+}
+
+function populateParentFolderSelect() {
+    if (!parentFolderSelect) return;
+    parentFolderSelect.innerHTML = '<option value="">Raíz (sin carpeta padre)</option>'; // Opción para carpeta raíz
+    function buildOptions(parentId = null, level = 0) {
+        const prefix = '\u00A0\u00A0'.repeat(level);
+        const folders = carpetasCache.filter(f => f.parent_id === parentId);
+        folders.forEach(folder => {
+            parentFolderSelect.innerHTML += `<option value="${folder.id}">${prefix}${folder.nombre}</option>`;
             buildOptions(folder.id, level + 1);
         });
     }

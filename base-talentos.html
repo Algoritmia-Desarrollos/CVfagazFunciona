@@ -26,13 +26,28 @@
       <aside class="folder-sidebar">
         <h3>Carpetas</h3>
         <ul id="folder-list" class="folder-list">
-          </ul>
-        <div class="form-group folder-actions">
-          <input type="text" id="new-folder-name" placeholder="Nombre de la nueva carpeta...">
-          <button id="add-folder-btn" class="btn btn-primary" style="width: 100%;">Crear Carpeta</button>
+        </ul>
+        <div class="folder-actions">
+            <button id="show-add-folder-form-btn" class="btn btn-primary" style="width: 100%;">Crear Carpeta</button>
+            <div id="add-folder-form" class="hidden" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                <div class="form-group">
+                    <label for="new-folder-name">Nombre de la carpeta</label>
+                    <input type="text" id="new-folder-name" placeholder="Ej: Desarrolladores">
+                </div>
+                <div class="form-group">
+                    <label for="parent-folder-select">Ubicación (opcional)</label>
+                    <select id="parent-folder-select">
+                        <option value="">Raíz (sin carpeta padre)</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button id="cancel-add-folder-btn" class="btn btn-secondary">Cancelar</button>
+                    <button id="add-folder-btn" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
         </div>
         
-        <div class="form-group">
+        <div class="form-group" style="margin-top: 1rem;">
           <input type="text" id="filtro-candidatos" placeholder="Buscar en la vista actual...">
         </div>
 
