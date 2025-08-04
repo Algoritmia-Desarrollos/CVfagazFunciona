@@ -60,6 +60,7 @@ a:hover {
   box-shadow: var(--shadow-md);
   padding: 2rem;
   margin-bottom: 2rem;
+  overflow: hidden; /* Evita que el contenido interno desborde el panel */
 }
 
 .dashboard-header {
@@ -76,6 +77,11 @@ a:hover {
   color: var(--text-dark);
   margin: 0;
   font-size: 1.875rem; /* 30px */
+  flex-grow: 1;
+  min-width: 0; /* Permite que el título se encoja */
+}
+.dashboard-header .actions-group {
+  flex-shrink: 0; /* Evita que el grupo de botones se encoja */
 }
 
 /* --- BARRA DE NAVEGACIÓN --- */
@@ -575,7 +581,12 @@ a:hover {
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 1rem; /* Aumentar el espacio vertical */
+  }
+  .dashboard-header .actions-group {
+    width: 100%; /* Hacer que el grupo de botones ocupe todo el ancho */
+    flex-wrap: wrap; /* Permitir que los botones se envuelvan */
+    justify-content: flex-start;
   }
   
   .nav-menu {
@@ -600,8 +611,10 @@ a:hover {
   .db-layout {
     grid-template-columns: 1fr; /* Una sola columna */
   }
+  .sidebar-wrapper {
+    position: static; /* Quitar el sticky en responsive */
+  }
   .folder-sidebar {
-    position: static; /* Quitar el sticky */
     margin-bottom: 1.5rem;
   }
   .actions-group {
