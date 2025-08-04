@@ -60,10 +60,10 @@ async function cargarYProcesarCandidatos(avisoId) {
     const nuevasEvaluaciones = evaluaciones.filter(ev => ev.calificacion === null || ev.calificacion === -1);
     
     if (nuevasEvaluaciones.length > 0) {
-        processingStatus.textContent = `Analizando ${nuevasEvaluaciones.length} nuevos CVs...`;
+        processingStatus.innerHTML = `<p>Analizando ${nuevasEvaluaciones.length} nuevos CVs...</p>`;
         
         for (const [index, evaluacion] of nuevasEvaluaciones.entries()) {
-            processingStatus.textContent = `Procesando ${index + 1} de ${nuevasEvaluaciones.length}... (${evaluacion.nombre_archivo})`;
+            processingStatus.innerHTML = `<p>Procesando ${index + 1} de ${nuevasEvaluaciones.length}... (${evaluacion.nombre_archivo})</p>`;
             
             if (evaluacion.calificacion === -1) {
                 evaluacion.calificacion = null;
@@ -100,9 +100,9 @@ async function cargarYProcesarCandidatos(avisoId) {
             }
             actualizarFilaEnVista(evaluacion.id);
         }
-        processingStatus.textContent = "Análisis completado.";
+        processingStatus.innerHTML = "<p>Análisis completado.</p>";
     } else {
-        processingStatus.textContent = "Todos los candidatos están calificados.";
+        processingStatus.innerHTML = "<p style='margin-bottom: 1rem;'>Todos los candidatos están calificados.</p>";
     }
 }
 
@@ -119,7 +119,7 @@ if (fileInputResumenes) {
         if (!files.length || !avisoActivo) return;
 
         uploadCvBtn.disabled = true;
-        processingStatus.textContent = `Agregando ${files.length} nuevo(s) CV(s)...`;
+        processingStatus.innerHTML = `<p>Agregando ${files.length} nuevo(s) CV(s)...</p>`;
         
         for (const file of files) {
             try {
