@@ -23,9 +23,10 @@
 
   <main class="main-container">
     <div class="db-layout">
-      <aside class="folder-sidebar">
-        <h3>Carpetas</h3>
-        <ul id="folder-list" class="folder-list">
+      <div class="sidebar-wrapper">
+        <aside class="folder-sidebar">
+          <h3>Carpetas</h3>
+          <ul id="folder-list" class="folder-list">
         </ul>
         <div class="folder-actions">
             <button id="show-add-folder-form-btn" class="btn btn-primary" style="width: 100%;">Crear Carpeta</button>
@@ -51,12 +52,17 @@
           <input type="text" id="filtro-candidatos" placeholder="Buscar en la vista actual...">
         </div>
 
-        <div class="bulk-actions-container hidden" id="bulk-actions-container">
-          <select id="move-to-folder-select"></select>
-          <button id="bulk-move-btn" class="btn btn-primary">Mover</button>
-          <button id="bulk-delete-btn" class="btn btn-danger">Eliminar</button>
+        </aside>
+        <div class="panel-container bulk-actions-panel hidden" id="bulk-actions-container">
+            <div class="bulk-actions-row">
+                <select id="move-to-folder-select"></select>
+                <button id="bulk-move-btn" class="btn btn-primary">Mover</button>
+            </div>
+            <div class="bulk-actions-row">
+                <button id="bulk-delete-btn" class="btn btn-danger" style="width: 100%;">Eliminar</button>
+            </div>
         </div>
-      </aside>
+      </div>
 
       <div class="panel-container db-main-content">
         <div class="dashboard-header">

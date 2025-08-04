@@ -172,6 +172,15 @@ a:hover {
   background-color: var(--bg-light);
   border-color: var(--input-border);
 }
+.btn-danger {
+  background-color: #fee2e2;
+  color: var(--danger-color);
+  border-color: #fecaca;
+}
+.btn-danger:hover {
+  background-color: #fecaca;
+  border-color: #fca5a5;
+}
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -290,13 +299,49 @@ a:hover {
   gap: 2rem;
   align-items: flex-start;
 }
+.sidebar-wrapper {
+  position: sticky;
+  top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* Espacio entre el panel de carpetas y el de acciones */
+}
 .folder-sidebar {
   background-color: var(--bg-white);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: 1.5rem;
-  position: sticky;
-  top: 2rem;
+}
+.bulk-actions-panel {
+  padding: 1rem; /* Menos padding para un look más compacto */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.bulk-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+.bulk-actions-panel select {
+  flex-grow: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+  background-color: var(--bg-white);
+  color: var(--text-dark);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
 }
 .folder-sidebar h3 {
   margin-top: 0;
