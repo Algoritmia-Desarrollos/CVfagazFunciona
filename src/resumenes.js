@@ -262,32 +262,32 @@ Primero, extrae los siguientes datos clave. Si un dato no está presente, usa nu
 -   telefono: El número de teléfono principal, priorizando móviles.
 
 **PASO 2: Sistema de Calificación Ponderado (Puntuación de 0 a 100).**
-Calcularás la nota final siguiendo este sistema de puntos que refleja las prioridades del reclutador.
+Calcularás la nota final siguiendo este sistema de puntos que refleja las prioridades del reclutador. La nota final será la suma de los puntos de las siguientes 3 categorías.
 
-**A. FILTRO CRÍTICO: Condiciones Necesarias (Ponderación: Máxima - Regla de Knock-Out)**
-   - Verifica metódica y literalmente CADA UNA de las "Condiciones Necesarias".
-   - **SI EL CANDIDATO NO CUMPLE CON ABSOLUTAMENTE TODAS las condiciones, el proceso se detiene aquí.** Asigna una calificación final entre **1 y 40 puntos** y en la justificación explica claramente cuál requisito excluyente faltó.
-   - **SI CUMPLE CON TODAS**, el candidato "aprueba" este filtro y se le otorga una **base de 50 puntos**. Continúa al siguiente paso para sumar puntos adicionales.
+**A. CONDICIONES INDISPENSABLES (Ponderación: 50 Puntos Máximo)**
+   - Este es el factor más importante. Comienza la evaluación de esta categoría con 0 puntos.
+   - Analiza CADA condición indispensable. Por CADA una que el candidato CUMPLE (ya sea explícitamente o si su experiencia lo sugiere fuertemente), suma la cantidad de puntos correspondiente (**50 Puntos / Total de Condiciones Indispensables**).
+   - **Regla de Penalización Clave:** Si un candidato no cumple con todas las condiciones, su puntaje aquí será menor a 50. Esto impactará significativamente su nota final, reflejando que es un perfil a considerar con reservas.
 
-**B. ANÁLISIS SECUNDARIO: Condiciones Deseables (Ponderación: Alta - hasta 25 Puntos Adicionales)**
-   - Si el candidato aprobó el Paso A, ahora evalúa las "Condiciones Deseables".
-   - Por CADA condición deseable que el candidato cumpla, suma la cantidad de puntos correspondiente (**25 Puntos / Total de Condiciones Deseables**). Sé estricto; si solo cumple parcialmente, otorga la mitad de los puntos para esa condición.
+**B. CONDICIONES DESEABLES (Ponderación: 25 Puntos Máximo)**
+   - Comienza con 0 puntos para esta categoría.
+   - Por CADA condición deseable que el candidato CUMPLE, suma la cantidad de puntos correspondiente (**25 Puntos / Total de Condiciones Deseables**). Sé estricto; si solo cumple parcialmente, otorga la mitad de los puntos para esa condición.
 
-**C. ANÁLISIS DE EXPERIENCIA: Match con la Descripción (Ponderación: Media - hasta 25 Puntos Adicionales)**
-   - Evalúa la calidad y relevancia de la experiencia laboral del candidato en relación con la descripción del puesto.
+**C. ANÁLISIS DE EXPERIENCIA Y MATCH GENERAL (Ponderación: 25 Puntos Máximo)**
+   - Comienza con 0 puntos para esta categoría.
+   - Evalúa la calidad y relevancia de la experiencia laboral del candidato en relación con la descripción general del puesto.
    - **Coincidencia de Rol y Funciones (hasta 15 puntos):** ¿La experiencia es en un puesto con un título y funciones idénticos o muy similares al del aviso? Un match perfecto (mismo rol, mismas tareas) otorga los 15 puntos. Un match parcial (rol diferente pero con tareas transferibles) otorga entre 5 y 10 puntos.
    - **Calidad del Perfil (hasta 10 puntos):** Evalúa la calidad general del CV. ¿Muestra una progresión de carrera lógica? ¿Es estable laboralmente? ¿Presenta logros cuantificables (ej: "aumenté ventas 15%") en lugar de solo listar tareas? Un CV con logros claros y buena estabilidad obtiene más puntos.
 
 **PASO 3: Elaboración de la Justificación Profesional.**
 Redacta un párrafo único y conciso que resuma tu dictamen, justificando la nota final basándote en el sistema de puntos.
-   - **Veredicto Inicial:** Comienza con una afirmación clara. Si fue descartado, indícalo (Ej: "Perfil descartado por no cumplir con el requisito excluyente de..."). Si aprobó, describe el nivel de "match" (Ej: "El candidato presenta un perfil muy competitivo...").
-   - **Argumento Central:** Justifica la nota mencionando explícitamente los puntos obtenidos. (Ej: "Cumple con todas las condiciones necesarias (Base 50 pts), cumple 2 de 3 condiciones deseables (+16.6 pts) y su experiencia tiene un match fuerte con la descripción (+12 pts)...").
-   - **Conclusión y Recomendación:** Cierra con la nota final calculada y una recomendación clara. (Ej: "...resultando en una calificación final de 79/100. Se recomienda una entrevista." o "...resultando en una calificación de 35/100. Se recomienda descartar.").
+   - **Veredicto Inicial:** Comienza con una afirmación clara sobre el nivel de "match".
+   - **Argumento Central:** Justifica la nota mencionando explícitamente los puntos obtenidos en cada categoría. (Ej: "El candidato obtiene 40/50 en condiciones indispensables al cumplir 4 de 5. Suma 15/25 en deseables y su experiencia tiene un match fuerte con la descripción (+12 pts)...").
+   - **Conclusión y Recomendación:** Cierra con la nota final calculada y una recomendación clara. (Ej: "...alcanzando una calificación final de 67/100. Se recomienda una entrevista secundaria." o "...alcanzando una calificación de 92/100. Es un candidato prioritario.").
 
 **Formato de Salida (JSON estricto):**
 Devuelve un objeto JSON con 5 claves: "nombreCompleto", "email", "telefono", "calificacion" (el número entero final calculado) y "justificacion" (el string de texto).
 `;
-
 
 
 
